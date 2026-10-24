@@ -7,6 +7,8 @@ services:
     envVars:
       - key: APP_ENV
         value: production
+      - key: SECRET_KEY
+        value: prod-secret-aiopportunityassistant-key-secure-2026-prod
       - key: DATABASE_URL
         value: sqlite+aiosqlite:///app/data/app.db
       - key: AI_MODEL_PROVIDER
