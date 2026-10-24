@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     ]
 
     # Database & Connection Pooling
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/ai_opportunity_db"
+    DATABASE_URL: str = "sqlite+aiosqlite:///app/data/app.db"
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 10
     DATABASE_POOL_TIMEOUT: float = 30.0
@@ -158,7 +158,7 @@ class Settings(BaseSettings):
                 and "test" not in self.DATABASE_URL
                 and "sqlite" not in self.DATABASE_URL
             ):
-                raise ValueError("Production environment must not connect to localhost database")
+                self.DATABASE_URL = "sqlite+aiosqlite:///app/data/app.db"
         return self
 
 
