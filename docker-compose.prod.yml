@@ -1,0 +1,146 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER_FILE: /run/secrets/db_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_DB: ${POSTGRES_DB:-opportunity_assistant_prod}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 8192M
+        reservations:
+          cpus: "1.0"
+          memory: 2048M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d ${POSTGRES_DB:-opportunity_assistant_prod}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - prod-backend-network
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+      - redis_prod_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4096M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - prod-backend-network
+
+  api:
+    image: ${DOCKER_REGISTRY:-registry.opportunity-assistant.internal}/api:${IMAGE_TAG:-latest}
+    restart: always
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-s3}
+      STORAGE_BUCKET_NAME: ${STORAGE_BUCKET_NAME}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      STORAGE_REGION: ${STORAGE_REGION:-us-east-1}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      DATABASE_POOL_SIZE: "20"
+      DATABASE_MAX_OVERFLOW: "10"
+      ENABLE_METRICS: "true"
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://app.opportunity-assistant.com}
+    ports:
+      - "8000:8000"
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2048M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/live"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - prod-backend-network
+
+  worker:
+    image: ${DOCKER_REGISTRY:-registry.opportunity-assistant.internal}/worker:${IMAGE_TAG:-latest}
+    restart: always
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-s3}
+      STORAGE_BUCKET_NAME: ${STORAGE_BUCKET_NAME}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+    deploy:
+      replicas: 4
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2048M
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - prod-backend-network
+
+volumes:
+  postgres_prod_data:
+  redis_prod_data:
+
+networks:
+  prod-backend-network:
+    driver: bridge
