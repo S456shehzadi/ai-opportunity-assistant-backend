@@ -14,6 +14,7 @@ class UserRegisterRequest(BaseModel):
 
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
+    full_name: str | None = None
     role: UserRole = UserRole.USER
 
 
@@ -44,6 +45,7 @@ class UserAuthResponse(BaseModel):
 
     id: UUID
     email: str
+    full_name: str | None = None
     role: UserRole
     is_active: bool
 

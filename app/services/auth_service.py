@@ -55,6 +55,7 @@ class AuthService:
         hashed = hash_password(payload.password)
         user = User(
             email=payload.email.lower().strip(),
+            full_name=payload.full_name.strip() if payload.full_name else None,
             hashed_password=hashed,
             role=payload.role,
             is_active=True,

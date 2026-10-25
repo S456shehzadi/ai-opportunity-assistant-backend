@@ -43,6 +43,10 @@ class User(Base, UUIDMixin, TimestampMixin):
         index=True,
         nullable=False,
     )
+    full_name: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
     hashed_password: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
