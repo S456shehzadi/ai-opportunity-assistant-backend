@@ -176,6 +176,57 @@ class HardFilterEngine:
                         filter_category="CATEGORY",
                     )
 
+            # Excluded Destinations Hard Filter
+            elif cat in ("EXCLUDED_COUNTRIES", "EXCLUDE_COUNTRY"):
+                host = get_opp_host_country(opp).lower()
+                excluded = [str(x).lower() for x in (val if isinstance(val, list) else [val])]
+                if any(ex in host for ex in excluded if ex and ex != "none"):
+                    return FilterEvaluation(
+                        passed=False,
+                        rejection_reason=f"Located in excluded destination ({host}).",
+                        filter_category="EXCLUDED_COUNTRY",
+                    )
+
+            # Application Fee Hard Filter (when strictly required zero fee)
+            elif cat in ("FEE", "NO_APPLICATION_FEE", "APPLICATION_FEE"):
+                fee = getattr(opp, "application_fee", None)
+                if fee is not None:
+                    try:
+                        if float(fee) > 0.0:
+                            return FilterEvaluation(
+                                passed=False,
+                                rejection_reason=f"Requires an application fee ({fee}).",
+                                filter_category="APPLICATION_FEE",
+                            )
+                    except (ValueError, TypeError):
+                        pass
+
+            # Mandatory English Test Hard Filter
+            elif cat in ("NO_IELTS", "NO_ENGLISH_TEST"):
+                if getattr(opp, "is_ielts_mandatory", False) or getattr(opp, "requires_ielts", False):
+                    return FilterEvaluation(
+                        passed=False,
+                        rejection_reason="Strictly requires an IELTS test with no waiver available.",
+                        filter_category="LANGUAGE_TEST",
+                    )
+
+            # Study Format Hard Filter
+            elif cat in ("STUDY_FORMAT", "FORMAT", "REMOTE"):
+                wanted_formats = [str(f).lower() for f in (val if isinstance(val, list) else [val])]
+                opp_format = getattr(opp, "study_format", None) or getattr(opp, "delivery_mode", None)
+                if (
+                    opp_format
+                    and any("online" in f or "remote" in f for f in wanted_formats)
+                    and "in_person" in str(opp_format).lower()
+                    and "online" not in str(opp_format).lower()
+                    and "remote" not in str(opp_format).lower()
+                ):
+                    return FilterEvaluation(
+                        passed=False,
+                        rejection_reason=f"Study format mismatch (required: online/remote; found: {opp_format}).",
+                        filter_category="STUDY_FORMAT",
+                    )
+
         return FilterEvaluation(passed=True)
 
 

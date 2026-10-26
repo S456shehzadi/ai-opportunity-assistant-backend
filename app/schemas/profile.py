@@ -397,17 +397,72 @@ class LanguageRead(LanguageBase):
 
 # User Preferences
 class UserPreferencesBase(BaseModel):
+    # Target Opportunity Categories & Education Levels
+    preferred_opportunity_categories: list[str] = Field(default_factory=list)
+    target_degree_levels: list[str] = Field(default_factory=list)
+    preferred_fields: list[str] = Field(default_factory=list)
+
+    # Destination & Location
     preferred_countries: list[str] = Field(default_factory=list)
     preferred_regions: list[str] = Field(default_factory=list)
-    preferred_opportunity_categories: list[str] = Field(default_factory=list)
-    preferred_fields: list[str] = Field(default_factory=list)
-    funding_preference: str | None = Field(default=None, max_length=100)
+    excluded_countries: list[str] = Field(default_factory=list)
+    willing_to_relocate: bool = True
     remote_preference: str | None = Field(default=None, max_length=100)
+
+    # Funding & Financial Constraints
+    funding_preference: str | None = Field(default=None, max_length=100)
+    funding_types: list[str] = Field(default_factory=list)
+    funding_priorities: list[str] = Field(default_factory=list)
+    max_annual_tuition: float | None = Field(default=None, ge=0.0)
+    financial_currency: str = Field(default="USD", max_length=10)
+    requires_no_application_fee: bool = False
+
+    # Language & Admission Testing
+    requires_no_ielts: bool = False
+    language_preferences: list[str] = Field(default_factory=list)
+    language_test_status: dict[str, Any] = Field(default_factory=dict)
+    admission_test_status: dict[str, Any] = Field(default_factory=dict)
+
+    # Study Format & Timeline
     study_mode: str | None = Field(default=None, max_length=100)
+    study_formats: list[str] = Field(default_factory=list)
+    duration_preferences: list[str] = Field(default_factory=list)
+    preferred_start_terms: list[str] = Field(default_factory=list)
+
+    # Career & Personal Priorities
+    career_priorities: list[str] = Field(default_factory=list)
+
+    # Hard Constraints vs Soft Preferences
+    hard_constraints: list[str] = Field(default_factory=list)
+    preferences_metadata: dict[str, Any] = Field(default_factory=dict)
 
 
-class UserPreferencesUpdate(UserPreferencesBase):
-    pass
+class UserPreferencesUpdate(BaseModel):
+    preferred_opportunity_categories: list[str] | None = None
+    target_degree_levels: list[str] | None = None
+    preferred_fields: list[str] | None = None
+    preferred_countries: list[str] | None = None
+    preferred_regions: list[str] | None = None
+    excluded_countries: list[str] | None = None
+    willing_to_relocate: bool | None = None
+    remote_preference: str | None = Field(default=None, max_length=100)
+    funding_preference: str | None = Field(default=None, max_length=100)
+    funding_types: list[str] | None = None
+    funding_priorities: list[str] | None = None
+    max_annual_tuition: float | None = Field(default=None, ge=0.0)
+    financial_currency: str | None = Field(default=None, max_length=10)
+    requires_no_application_fee: bool | None = None
+    requires_no_ielts: bool | None = None
+    language_preferences: list[str] | None = None
+    language_test_status: dict[str, Any] | None = None
+    admission_test_status: dict[str, Any] | None = None
+    study_mode: str | None = Field(default=None, max_length=100)
+    study_formats: list[str] | None = None
+    duration_preferences: list[str] | None = None
+    preferred_start_terms: list[str] | None = None
+    career_priorities: list[str] | None = None
+    hard_constraints: list[str] | None = None
+    preferences_metadata: dict[str, Any] | None = None
 
 
 class UserPreferencesRead(UserPreferencesBase):

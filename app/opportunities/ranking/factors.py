@@ -1084,3 +1084,109 @@ class ExperienceFitCalculator:
             reason="Opportunity does not mandate prior work experience; open to all experience backgrounds.",
             confidence=RecommendationConfidence.MEDIUM,
         )
+
+
+class UserPreferenceFitCalculator:
+    """Evaluates multi-attribute alignment with user's soft preferences and priorities."""
+
+    @classmethod
+    def calculate(
+        cls,
+        opp: Any,
+        preferences: list[UserPreference] | None = None,
+    ) -> RankingFactorDetail:
+        if not preferences:
+            return RankingFactorDetail(
+                factor_type=RankingFactorType.USER_PREFERENCE_FIT,
+                score=0.85,
+                status="HIGH",
+                reason="Default preferences applied; broad opportunity compatibility.",
+                confidence=RecommendationConfidence.MEDIUM,
+            )
+
+        match_scores: list[float] = []
+        matching_reasons: list[str] = []
+
+        host = get_opp_host_country(opp).lower()
+        opp_cat = get_opp_category(opp).lower()
+        funding = get_opp_funding_type(opp).lower()
+
+        for pref in preferences:
+            cat = pref.category.upper()
+            val = pref.value
+            if not val:
+                continue
+
+            # Target Country / Region
+            if cat in ("LOCATION", "COUNTRY", "DESTINATION"):
+                wanted = [str(x).lower() for x in (val if isinstance(val, list) else [val])]
+                if any(w in host for w in wanted) or host in ("global", "worldwide"):
+                    match_scores.append(1.0)
+                    matching_reasons.append(f"Destination match ({host.title()})")
+                else:
+                    match_scores.append(0.65)
+
+            # Excluded Country
+            elif cat in ("EXCLUDED_COUNTRIES", "EXCLUDE_COUNTRY"):
+                excluded = [str(x).lower() for x in (val if isinstance(val, list) else [val])]
+                if any(ex in host for ex in excluded if ex and ex != "none"):
+                    match_scores.append(0.20)
+                    matching_reasons.append(f"Located in deprioritized destination ({host.title()})")
+
+            # Opportunity Category
+            elif cat in ("CATEGORY", "OPPORTUNITY_TYPE"):
+                wanted_cats = [str(x).lower() for x in (val if isinstance(val, list) else [val])]
+                if any(w in opp_cat for w in wanted_cats):
+                    match_scores.append(1.0)
+                    matching_reasons.append(f"Target program type ({opp_cat.title()})")
+                else:
+                    match_scores.append(0.70)
+
+            # Funding
+            elif cat == "FUNDING":
+                wanted_fund = str(val).lower()
+                if "full" in wanted_fund and "full" in funding:
+                    match_scores.append(1.0)
+                    matching_reasons.append("Matches full funding preference")
+                elif "full" in wanted_fund:
+                    match_scores.append(0.55)
+                else:
+                    match_scores.append(0.85)
+
+            # Application Fee
+            elif cat in ("FEE", "NO_APPLICATION_FEE"):
+                fee = getattr(opp, "application_fee", None)
+                if fee is not None:
+                    try:
+                        if float(fee) == 0.0:
+                            match_scores.append(1.0)
+                            matching_reasons.append("Verified zero application fee")
+                        else:
+                            match_scores.append(0.60)
+                    except (ValueError, TypeError):
+                        pass
+
+        if not match_scores:
+            return RankingFactorDetail(
+                factor_type=RankingFactorType.USER_PREFERENCE_FIT,
+                score=0.85,
+                status="HIGH",
+                reason="Aligned with user opportunity preferences.",
+                confidence=RecommendationConfidence.MEDIUM,
+            )
+
+        avg_score = round(sum(match_scores) / len(match_scores), 2)
+        status = "HIGH" if avg_score >= 0.80 else ("MEDIUM" if avg_score >= 0.60 else "LOW")
+        reason_str = (
+            "; ".join(matching_reasons[:3])
+            if matching_reasons
+            else "Evaluated against user preferences."
+        )
+
+        return RankingFactorDetail(
+            factor_type=RankingFactorType.USER_PREFERENCE_FIT,
+            score=avg_score,
+            status=status,
+            reason=reason_str,
+            confidence=RecommendationConfidence.HIGH,
+        )

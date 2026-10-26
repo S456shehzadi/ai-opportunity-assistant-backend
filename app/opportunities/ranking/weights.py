@@ -13,9 +13,9 @@ from app.opportunities.ranking.schemas import RankingFactorType
 class RankingWeightsConfig(BaseModel):
     """Configurable weights controlling the importance of each ranking dimension."""
 
-    academic_fit: float = Field(default=0.16, ge=0.0)
-    field_fit: float = Field(default=0.12, ge=0.0)
-    funding_fit: float = Field(default=0.14, ge=0.0)
+    academic_fit: float = Field(default=0.15, ge=0.0)
+    field_fit: float = Field(default=0.11, ge=0.0)
+    funding_fit: float = Field(default=0.12, ge=0.0)
     location_fit: float = Field(default=0.10, ge=0.0)
     degree_level_fit: float = Field(default=0.10, ge=0.0)
     deadline_relevance: float = Field(default=0.08, ge=0.0)
@@ -29,7 +29,7 @@ class RankingWeightsConfig(BaseModel):
     language_fit: float = Field(default=0.0, ge=0.0)
     test_requirement_fit: float = Field(default=0.0, ge=0.0)
     experience_fit: float = Field(default=0.08, ge=0.0)
-    user_preference_fit: float = Field(default=0.0, ge=0.0)
+    user_preference_fit: float = Field(default=0.08, ge=0.0)
     opportunity_category_fit: float = Field(default=0.0, ge=0.0)
 
     def get_factor_weight(self, factor_type: RankingFactorType) -> float:

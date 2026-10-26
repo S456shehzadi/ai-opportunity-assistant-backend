@@ -409,7 +409,7 @@ class Language(Base, UUIDMixin, TimestampMixin):
 
 
 class UserPreferences(Base, UUIDMixin, TimestampMixin):
-    """Target countries, fields, categories, and funding preferences for AI matching."""
+    """Target countries, fields, categories, funding, and decision constraints for AI matching."""
 
     __tablename__ = "user_preferences"
 
@@ -420,14 +420,51 @@ class UserPreferences(Base, UUIDMixin, TimestampMixin):
         index=True,
         nullable=False,
     )
-    preferred_countries: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
-    preferred_regions: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    # Target Opportunity Categories & Education Levels
     preferred_opportunity_categories: Mapped[list[str]] = mapped_column(
         JSON, default=list, nullable=False
     )
+    target_degree_levels: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     preferred_fields: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
-    funding_preference: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    # Destination & Location
+    preferred_countries: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    preferred_regions: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    excluded_countries: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    willing_to_relocate: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     remote_preference: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    # Funding & Financial Constraints
+    funding_preference: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    funding_types: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    funding_priorities: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    max_annual_tuition: Mapped[float | None] = mapped_column(Float, nullable=True)
+    financial_currency: Mapped[str] = mapped_column(String(10), default="USD", nullable=False)
+    requires_no_application_fee: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
+    # Language & Admission Testing
+    requires_no_ielts: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    language_preferences: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    language_test_status: Mapped[dict[str, Any]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+    admission_test_status: Mapped[dict[str, Any]] = mapped_column(
+        JSON, default=dict, nullable=False
+    )
+
+    # Study Format & Timeline
     study_mode: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    study_formats: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    duration_preferences: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    preferred_start_terms: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+
+    # Career & Personal Priorities
+    career_priorities: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+
+    # Hard Constraints vs Soft Preferences
+    hard_constraints: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    preferences_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="preferences")

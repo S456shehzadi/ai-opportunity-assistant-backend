@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, status
 
@@ -93,10 +94,36 @@ async def update_profile(
     return UserProfileRead.model_validate(profile)
 
 
+@router.get(
+    "/preferences",
+    response_model=UserPreferencesRead,
+    summary="Get User Preferences",
+)
+async def get_preferences(
+    current_user: User = Depends(get_current_user),
+    service: ProfileService = Depends(get_profile_service),
+) -> UserPreferencesRead:
+    full_profile = await service.get_full_profile(current_user.id)
+    if full_profile.preferences:
+        return UserPreferencesRead.model_validate(full_profile.preferences)
+    return UserPreferencesRead(
+        id=uuid.uuid4(),
+        user_id=current_user.id,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+
+
 @router.put(
     "/preferences",
     response_model=UserPreferencesRead,
     summary="Update User Preferences",
+)
+@router.patch(
+    "/preferences",
+    response_model=UserPreferencesRead,
+    summary="Patch User Preferences",
+    include_in_schema=False,
 )
 async def update_preferences(
     data: UserPreferencesUpdate,

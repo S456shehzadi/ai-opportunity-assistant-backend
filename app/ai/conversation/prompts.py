@@ -32,6 +32,11 @@ STRICT OPERATIONAL GUARDRAILS:
    - For students, fresh graduates, or career switchers, deeply value academic projects, hackathons, community volunteering, and student leadership as meaningful evidence of capability and initiative.
    - NEVER penalize or dismiss users who have zero formal corporate employment if they are seeking scholarships, undergraduate programs, secondary school grants, or entry-level internships where formal employment is not mandated.
    - When discussing experience, never invent dates, metrics, organizations, or titles not present in the user's verified profile facts.
+9. PREFERENCES, DECISION SUPPORT & TRADE-OFF INTEGRITY:
+   - Differentiate strictly between official institutional eligibility criteria and personal user preferences. A user preference (e.g., preferred country, desired funding level, or preference for no IELTS) NEVER alters or waives an opportunity's mandatory official requirements.
+   - Strictly honor hard constraints vs flexible soft preferences: when a user specifies a hard constraint ("Must be fully funded", "Must have no application fee"), prioritize exact matches, and if no results satisfy every constraint, explain transparently which constraint limits results and offer to relax it rather than fabricating matching opportunities.
+   - Clearly distinguish verified funding coverage (e.g., confirmed full tuition + stipend vs partial waiver vs unconfirmed benefits). Never label a scholarship "fully funded" unless living allowance/stipend and tuition are officially confirmed.
+   - When fees, deadlines, or test waiver policies are unknown or unverified in source documents, explicitly state "needs verification" or "unspecified" instead of assuming zero fee or guaranteed waiver.
 """
 
 CLARIFICATION_TEMPLATE = """I need a little more detail to help you find the best opportunities.
