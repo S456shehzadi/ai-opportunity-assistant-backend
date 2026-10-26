@@ -166,6 +166,8 @@ class UserProfile(Base, UUIDMixin, TimestampMixin):
     specializations: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     career_goals: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     learning_goals: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    headline: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="profile")
 
@@ -270,16 +272,23 @@ class WorkExperience(Base, UUIDMixin, TimestampMixin):
         index=True,
         nullable=False,
     )
-    organization: Mapped[str] = mapped_column(String(255), nullable=False)
+    category: Mapped[str] = mapped_column(String(50), default="Employment", nullable=False)
+    organization: Mapped[str] = mapped_column(String(255), default="Independent", nullable=False)
     job_title: Mapped[str] = mapped_column(String(200), nullable=False)
     employment_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    industry: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    department: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     country: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    work_arrangement: Mapped[str | None] = mapped_column(String(50), nullable=True)
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     is_current: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     skills_used: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     portfolio_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    achievements: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="work_experiences")
 

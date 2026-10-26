@@ -74,6 +74,16 @@ class WorkExperienceSummary(BaseModel):
     roles: list[str] = Field(default_factory=list)
     organizations: list[str] = Field(default_factory=list)
     current_role: str | None = None
+    categories: list[str] = Field(default_factory=list)
+    has_internship: bool = False
+    has_volunteering: bool = False
+    has_leadership: bool = False
+    has_freelance_or_entrepreneurship: bool = False
+    has_competition_or_award: bool = False
+    skills_applied: list[str] = Field(default_factory=list)
+    experience_items: list[dict[str, Any]] = Field(default_factory=list)
+    headline: str | None = None
+    summary: str | None = None
 
 
 class ResearchExperienceSummary(BaseModel):
@@ -148,6 +158,8 @@ class NormalizedAIProfile(BaseModel):
     specializations: list[str] = Field(default_factory=list)
     career_goals: list[str] = Field(default_factory=list)
     learning_goals: list[str] = Field(default_factory=list)
+    headline: str | None = None
+    summary: str | None = None
     certifications: list[dict[str, Any]] = Field(default_factory=list)
 
     # Categorized skill status

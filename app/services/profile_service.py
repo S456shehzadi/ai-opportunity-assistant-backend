@@ -30,6 +30,7 @@ from app.schemas.profile import (
     UserProfileCreate,
     UserProfileUpdate,
     WorkExperienceCreate,
+    WorkExperienceUpdate,
 )
 from app.services.profile_normalizer import AIProfileContext, ProfileNormalizer
 
@@ -112,6 +113,23 @@ class ProfileService:
         if not user:
             raise EntityNotFoundException("User", user_id)
         return await self.repo.add_work_experience(user_id, data.model_dump())
+
+    async def update_work_experience(
+        self, user_id: uuid.UUID, exp_id: uuid.UUID, data: WorkExperienceUpdate
+    ) -> WorkExperience:
+        user = await self.repo.get_user_by_id(user_id)
+        if not user:
+            raise EntityNotFoundException("User", user_id)
+        exp = await self.repo.update_work_experience(user_id, exp_id, data.model_dump(exclude_unset=True))
+        if not exp:
+            raise EntityNotFoundException("WorkExperience", exp_id)
+        return exp
+
+    async def delete_work_experience(self, user_id: uuid.UUID, exp_id: uuid.UUID) -> bool:
+        deleted = await self.repo.delete_work_experience(user_id, exp_id)
+        if not deleted:
+            raise EntityNotFoundException("WorkExperience", exp_id)
+        return True
 
     async def add_research_experience(
         self, user_id: uuid.UUID, data: ResearchExperienceCreate

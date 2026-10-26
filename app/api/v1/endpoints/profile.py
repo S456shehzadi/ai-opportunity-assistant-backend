@@ -29,6 +29,7 @@ from app.schemas.profile import (
     UserProfileUpdate,
     WorkExperienceCreate,
     WorkExperienceRead,
+    WorkExperienceUpdate,
 )
 from app.services.profile_normalizer import AIProfileContext
 from app.services.profile_service import ProfileService
@@ -171,6 +172,13 @@ async def add_skill(
     status_code=status.HTTP_201_CREATED,
     summary="Add Work Experience",
 )
+@router.post(
+    "/experience",
+    response_model=WorkExperienceRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add Experience (Alias)",
+    include_in_schema=False,
+)
 async def add_work_experience(
     data: WorkExperienceCreate,
     current_user: User = Depends(get_current_user),
@@ -178,6 +186,46 @@ async def add_work_experience(
 ) -> WorkExperienceRead:
     work = await service.add_work_experience(current_user.id, data)
     return WorkExperienceRead.model_validate(work)
+
+
+@router.patch(
+    "/work-experience/{exp_id}",
+    response_model=WorkExperienceRead,
+    summary="Update Work Experience",
+)
+@router.patch(
+    "/experience/{exp_id}",
+    response_model=WorkExperienceRead,
+    summary="Update Experience (Alias)",
+    include_in_schema=False,
+)
+async def update_work_experience(
+    exp_id: uuid.UUID,
+    data: WorkExperienceUpdate,
+    current_user: User = Depends(get_current_user),
+    service: ProfileService = Depends(get_profile_service),
+) -> WorkExperienceRead:
+    work = await service.update_work_experience(current_user.id, exp_id, data)
+    return WorkExperienceRead.model_validate(work)
+
+
+@router.delete(
+    "/work-experience/{exp_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete Work Experience",
+)
+@router.delete(
+    "/experience/{exp_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete Experience (Alias)",
+    include_in_schema=False,
+)
+async def delete_work_experience(
+    exp_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    service: ProfileService = Depends(get_profile_service),
+) -> None:
+    await service.delete_work_experience(current_user.id, exp_id)
 
 
 @router.post(

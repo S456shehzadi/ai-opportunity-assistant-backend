@@ -30,17 +30,12 @@ class UserProfileBase(BaseModel):
 
     # Professional Fields, Specializations, and Goals
     primary_field: str | None = Field(default=None, max_length=150)
-    secondary_fields: list[str] | None = None
-    specializations: list[str] | None = None
-    career_goals: list[str] | None = None
-    learning_goals: list[str] | None = None
-
-    # Professional Fields, Specializations, and Goals
-    primary_field: str | None = Field(default=None, max_length=150)
     secondary_fields: list[str] = Field(default_factory=list)
     specializations: list[str] = Field(default_factory=list)
     career_goals: list[str] = Field(default_factory=list)
     learning_goals: list[str] = Field(default_factory=list)
+    headline: str | None = Field(default=None, max_length=255)
+    summary: str | None = Field(default=None, max_length=5000)
 
     @field_validator("nationality", "country_of_residence", "city", mode="before")
     @classmethod
@@ -76,6 +71,8 @@ class UserProfileUpdate(BaseModel):
     specializations: list[str] | None = None
     career_goals: list[str] | None = None
     learning_goals: list[str] | None = None
+    headline: str | None = Field(default=None, max_length=255)
+    summary: str | None = Field(default=None, max_length=5000)
 
 
 class UserProfileRead(UserProfileBase):
@@ -198,26 +195,62 @@ class SkillRead(SkillBase):
 
 # Work Experience
 class WorkExperienceBase(BaseModel):
-    organization: str = Field(min_length=2, max_length=255)
-    job_title: str = Field(min_length=2, max_length=200)
+    category: str = Field(default="Employment", max_length=50)
+    organization: str = Field(default="Independent", min_length=1, max_length=255)
+    job_title: str = Field(min_length=1, max_length=200)
     employment_type: str | None = Field(default=None, max_length=100)
+    industry: str | None = Field(default=None, max_length=150)
+    department: str | None = Field(default=None, max_length=150)
+    city: str | None = Field(default=None, max_length=100)
     country: str | None = Field(default=None, max_length=100)
+    work_arrangement: str | None = Field(default=None, max_length=50)
     start_date: date | None = None
     end_date: date | None = None
     is_current: bool = False
     description: str | None = Field(default=None, max_length=5000)
     skills_used: list[str] = Field(default_factory=list)
     portfolio_url: str | None = Field(default=None, max_length=500)
+    achievements: list[dict[str, Any] | str] = Field(default_factory=list)
+    metadata_json: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("organization", mode="before")
+    @classmethod
+    def sanitize_org(cls, v: Any) -> str:
+        if not v or not str(v).strip():
+            return "Independent"
+        return str(v).strip()
 
     @model_validator(mode="after")
     def validate_dates(self) -> "WorkExperienceBase":
         if self.start_date and self.end_date and self.end_date < self.start_date:
             raise ValueError("end_date cannot be before start_date.")
+        if self.is_current:
+            self.end_date = None
         return self
 
 
 class WorkExperienceCreate(WorkExperienceBase):
     pass
+
+
+class WorkExperienceUpdate(BaseModel):
+    category: str | None = Field(default=None, max_length=50)
+    organization: str | None = Field(default=None, max_length=255)
+    job_title: str | None = Field(default=None, max_length=200)
+    employment_type: str | None = Field(default=None, max_length=100)
+    industry: str | None = Field(default=None, max_length=150)
+    department: str | None = Field(default=None, max_length=150)
+    city: str | None = Field(default=None, max_length=100)
+    country: str | None = Field(default=None, max_length=100)
+    work_arrangement: str | None = Field(default=None, max_length=50)
+    start_date: date | None = None
+    end_date: date | None = None
+    is_current: bool | None = None
+    description: str | None = Field(default=None, max_length=5000)
+    skills_used: list[str] | None = None
+    portfolio_url: str | None = Field(default=None, max_length=500)
+    achievements: list[dict[str, Any] | str] | None = None
+    metadata_json: dict[str, Any] | None = None
 
 
 class WorkExperienceRead(WorkExperienceBase):

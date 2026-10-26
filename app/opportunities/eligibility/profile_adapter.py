@@ -40,6 +40,16 @@ class UnifiedUserFacts(BaseModel):
     work_experience_years: float = 0.0
     has_research_experience: bool = False
     publication_count: int = 0
+    experience_categories: list[str] = Field(default_factory=list)
+    has_internship: bool = False
+    has_volunteering: bool = False
+    has_leadership: bool = False
+    has_freelance: bool = False
+    has_competitions: bool = False
+    skills_applied: list[str] = Field(default_factory=list)
+    experience_items: list[dict[str, Any]] = Field(default_factory=list)
+    headline: str | None = None
+    summary: str | None = None
 
     # Skills & Languages
     skills: list[str] = Field(default_factory=list)
@@ -123,6 +133,10 @@ class ProfileAdapter:
         highest_cgpa = perf.raw_cgpa or (max(gpas) if gpas else None)
         highest_pct = perf.raw_percentage or (max(percentages) if percentages else None)
 
+        we = profile.work_experience
+        headline = profile.headline or getattr(we, "headline", None)
+        summary = profile.summary or getattr(we, "summary", None)
+
         return UnifiedUserFacts(
             user_id=user_id,
             email=email,
@@ -140,9 +154,19 @@ class ProfileAdapter:
             highest_percentage=highest_pct,
             has_english_medium_degree=has_emi,
             tests=test_dict,
-            work_experience_years=profile.work_experience.total_years,
+            work_experience_years=we.total_years,
             has_research_experience=profile.research_experience.has_research_experience,
             publication_count=profile.publications.publication_count,
+            experience_categories=getattr(we, "categories", []),
+            has_internship=getattr(we, "has_internship", False),
+            has_volunteering=getattr(we, "has_volunteering", False),
+            has_leadership=getattr(we, "has_leadership", False),
+            has_freelance=getattr(we, "has_freelance_or_entrepreneurship", False),
+            has_competitions=getattr(we, "has_competition_or_award", False),
+            skills_applied=getattr(we, "skills_applied", []),
+            experience_items=getattr(we, "experience_items", []),
+            headline=headline,
+            summary=summary,
             skills=[s.normalized_name for s in profile.skills],
             skills_have=profile.skills_have,
             skills_learning=profile.skills_learning,
@@ -195,6 +219,33 @@ class ProfileAdapter:
                 name = t_dict.get("test_name") or t_dict.get("canonical_test_name") or "UNKNOWN"
                 tests_clean[name.upper()] = t_dict
 
+        # Experience extraction
+        raw_exp = data.get("work_experience") or data.get("experiences") or []
+        exp_categories: list[str] = list(data.get("experience_categories") or [])
+        skills_applied: list[str] = list(data.get("skills_applied") or [])
+        exp_items: list[dict[str, Any]] = []
+
+        if isinstance(raw_exp, list):
+            for e in raw_exp:
+                e_dict = e if isinstance(e, dict) else (e.model_dump() if hasattr(e, "model_dump") else {})
+                exp_items.append(e_dict)
+                cat = e_dict.get("category")
+                if cat and cat not in exp_categories:
+                    exp_categories.append(cat)
+                for sk in e_dict.get("skills_used", []) or e_dict.get("skills", []):
+                    if sk and sk not in skills_applied:
+                        skills_applied.append(sk)
+        elif isinstance(raw_exp, dict):
+            exp_categories = raw_exp.get("categories", exp_categories)
+            skills_applied = raw_exp.get("skills_applied", skills_applied)
+            exp_items = raw_exp.get("experience_items", [])
+
+        has_internship = data.get("has_internship", any("intern" in c.lower() for c in exp_categories))
+        has_volunteering = data.get("has_volunteering", any("volunt" in c.lower() or "community" in c.lower() for c in exp_categories))
+        has_leadership = data.get("has_leadership", any("lead" in c.lower() or "student" in c.lower() for c in exp_categories))
+        has_freelance = data.get("has_freelance", any("freelance" in c.lower() or "startup" in c.lower() or "entrepreneur" in c.lower() for c in exp_categories))
+        has_competitions = data.get("has_competitions", any("compet" in c.lower() or "hackathon" in c.lower() for c in exp_categories))
+
         return UnifiedUserFacts(
             user_id=user_id,
             email=email,
@@ -218,6 +269,16 @@ class ProfileAdapter:
             work_experience_years=data.get("work_experience_years", 0.0),
             has_research_experience=data.get("has_research_experience", False),
             publication_count=data.get("publication_count", 0),
+            experience_categories=exp_categories,
+            has_internship=has_internship,
+            has_volunteering=has_volunteering,
+            has_leadership=has_leadership,
+            has_freelance=has_freelance,
+            has_competitions=has_competitions,
+            skills_applied=skills_applied,
+            experience_items=exp_items,
+            headline=data.get("headline"),
+            summary=data.get("summary"),
             skills=data.get("skills", []),
             skills_have=data.get("skills_have", []),
             skills_learning=data.get("skills_learning", []),
@@ -304,6 +365,44 @@ class ProfileAdapter:
                 elif st == "desired":
                     skills_desired.append(s.name)
 
+        # Extract work experiences
+        work_exps = getattr(db_profile, "work_experiences", []) or (
+            getattr(db_user, "work_experiences", []) if db_user else []
+        )
+        exp_categories: list[str] = []
+        skills_applied: list[str] = []
+        exp_items: list[dict[str, Any]] = []
+        total_exp_years = 0.0
+
+        for wexp in work_exps:
+            cat = getattr(wexp, "category", "Employment") or "Employment"
+            if cat not in exp_categories:
+                exp_categories.append(cat)
+            s_date = getattr(wexp, "start_date", None)
+            e_date = getattr(wexp, "end_date", None)
+            is_cur = getattr(wexp, "is_current", False)
+            if s_date:
+                end_calc = e_date or (datetime.now(UTC).date() if is_cur else s_date)
+                dur_years = max(0.0, (end_calc.year - s_date.year) + (end_calc.month - s_date.month) / 12.0)
+                total_exp_years += dur_years
+
+            item_dict = {
+                "id": str(getattr(wexp, "id", "")),
+                "title": getattr(wexp, "job_title", ""),
+                "organization": getattr(wexp, "organization", ""),
+                "category": cat,
+                "industry": getattr(wexp, "industry", None),
+                "is_current": is_cur,
+                "achievements": getattr(wexp, "achievements", []) or [],
+            }
+            exp_items.append(item_dict)
+
+        has_intern = any("intern" in c.lower() for c in exp_categories)
+        has_volun = any("volunt" in c.lower() or "community" in c.lower() for c in exp_categories)
+        has_leader = any("lead" in c.lower() or "student" in c.lower() for c in exp_categories)
+        has_freelance = any("freelance" in c.lower() or "startup" in c.lower() or "entrepreneur" in c.lower() for c in exp_categories)
+        has_comp = any("compet" in c.lower() or "hackathon" in c.lower() for c in exp_categories)
+
         return UnifiedUserFacts(
             user_id=user_id,
             nationality=getattr(db_profile, "nationality", None),
@@ -312,6 +411,17 @@ class ProfileAdapter:
             date_of_birth=dob,
             age=age,
             academic_records=records,
+            work_experience_years=round(total_exp_years, 1),
+            experience_categories=exp_categories,
+            has_internship=has_intern,
+            has_volunteering=has_volun,
+            has_leadership=has_leader,
+            has_freelance=has_freelance,
+            has_competitions=has_comp,
+            skills_applied=skills_applied,
+            experience_items=exp_items,
+            headline=getattr(db_profile, "headline", None),
+            summary=getattr(db_profile, "summary", None),
             primary_field=getattr(db_profile, "primary_field", None),
             secondary_fields=getattr(db_profile, "secondary_fields", None) or [],
             specializations=getattr(db_profile, "specializations", None) or [],

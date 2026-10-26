@@ -83,6 +83,8 @@ class AIProfileContext(BaseModel):
     specializations: list[str] = Field(default_factory=list)
     career_goals: list[str] = Field(default_factory=list)
     learning_goals: list[str] = Field(default_factory=list)
+    headline: str | None = None
+    summary: str | None = None
     certifications: list[dict[str, Any]] = Field(default_factory=list)
     languages: dict[str, str] = Field(default_factory=dict)
     experience: ExperienceSummary
@@ -280,7 +282,7 @@ class ProfileNormalizer:
             elif norm_s.status == "desired":
                 skills_desired.append(norm_s.normalized_name)
 
-        # 5. Work & Research Experience
+        # 5. Work & Professional Experience (covering all 12 categories)
         total_work_years = (
             sum(
                 ((w.end_date.year - w.start_date.year) if w.end_date and w.start_date else 1.0)
@@ -290,11 +292,86 @@ class ProfileNormalizer:
             else 0.0
         )
 
+        categories_found = list({
+            str(getattr(w, "category", "Employment") or "Employment").strip()
+            for w in user.work_experiences
+        })
+
+        has_intern = any(
+            "intern" in getattr(w, "category", "").lower() or "intern" in w.job_title.lower()
+            for w in user.work_experiences
+        )
+        has_volun = any(
+            "volunteer" in getattr(w, "category", "").lower()
+            or "community" in getattr(w, "category", "").lower()
+            for w in user.work_experiences
+        )
+        has_leader = any(
+            "leader" in getattr(w, "category", "").lower()
+            or "student" in getattr(w, "category", "").lower()
+            or any(term in w.job_title.lower() for term in ("lead", "president", "founder", "head"))
+            for w in user.work_experiences
+        )
+        has_freelance = any(
+            cat in getattr(w, "category", "").lower()
+            for cat in ("freelance", "entrepreneur", "startup", "contract", "self-employed")
+            for w in user.work_experiences
+        )
+        has_comp = any(
+            "competition" in getattr(w, "category", "").lower()
+            or "hackathon" in getattr(w, "category", "").lower()
+            or any(
+                term in str(ach).lower()
+                for ach in (getattr(w, "achievements", []) or [])
+                for term in ("won", "winner", "award", "hackathon", "competition", "1st place", "first place", "challenge")
+            )
+            for w in user.work_experiences
+        )
+
+        skills_applied = list({
+            s for w in user.work_experiences for s in (getattr(w, "skills_used", []) or []) if s
+        })
+
+        exp_items = [
+            {
+                "id": str(w.id),
+                "category": getattr(w, "category", "Employment"),
+                "job_title": w.job_title,
+                "organization": w.organization,
+                "employment_type": w.employment_type,
+                "industry": getattr(w, "industry", None),
+                "city": getattr(w, "city", None),
+                "country": w.country,
+                "work_arrangement": getattr(w, "work_arrangement", None),
+                "start_date": w.start_date.isoformat() if w.start_date else None,
+                "end_date": w.end_date.isoformat() if w.end_date else None,
+                "is_current": w.is_current,
+                "description": w.description,
+                "skills_used": getattr(w, "skills_used", []) or [],
+                "achievements": getattr(w, "achievements", []) or [],
+                "metadata_json": getattr(w, "metadata_json", {}) or {},
+            }
+            for w in user.work_experiences
+        ]
+
+        headline = getattr(profile, "headline", None) if profile else None
+        summary = getattr(profile, "summary", None) if profile else None
+
         work_summary = WorkExperienceSummary(
             total_years=round(max(total_work_years, len(user.work_experiences) * 1.0), 1),
             roles=[w.job_title for w in user.work_experiences],
             organizations=[w.organization for w in user.work_experiences],
             current_role=(next((w.job_title for w in user.work_experiences if w.is_current), None)),
+            categories=categories_found,
+            has_internship=has_intern,
+            has_volunteering=has_volun,
+            has_leadership=has_leader,
+            has_freelance_or_entrepreneurship=has_freelance,
+            has_competition_or_award=has_comp,
+            skills_applied=skills_applied,
+            experience_items=exp_items,
+            headline=headline,
+            summary=summary,
         )
 
         research_summary = ResearchExperienceSummary(
@@ -389,12 +466,20 @@ class ProfileNormalizer:
             "primary_field": primary_field,
             "specializations": specializations,
             "career_goals": career_goals,
+            "headline": headline,
+            "summary": summary,
             "gpa_4_scale": academic_perf.normalized_gpa_4_scale,
             "has_publications": pub_summary.publication_count > 0,
             "skills": [s.normalized_name for s in normalized_skills],
             "skills_have": skills_have,
             "skills_learning": skills_learning,
             "skills_desired": skills_desired,
+            "experience_categories": work_summary.categories,
+            "has_internship": work_summary.has_internship,
+            "has_volunteering": work_summary.has_volunteering,
+            "has_leadership": work_summary.has_leadership,
+            "has_freelance": work_summary.has_freelance_or_entrepreneurship,
+            "skills_applied": work_summary.skills_applied,
             "valid_tests": [
                 t.canonical_test_name
                 for t in normalized_tests.values()
@@ -417,6 +502,8 @@ class ProfileNormalizer:
             specializations=specializations,
             career_goals=career_goals,
             learning_goals=learning_goals,
+            headline=headline,
+            summary=summary,
             certifications=cert_items,
             skills_have=skills_have,
             skills_learning=skills_learning,
@@ -522,6 +609,8 @@ class ProfileNormalizer:
             specializations=rich_profile.specializations,
             career_goals=rich_profile.career_goals,
             learning_goals=rich_profile.learning_goals,
+            headline=rich_profile.headline,
+            summary=rich_profile.summary,
             certifications=rich_profile.certifications,
             languages=rich_profile.languages,
             experience=experience,

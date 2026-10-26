@@ -178,10 +178,57 @@ class ProfileRepository:
 
     # Work Experiences
     async def add_work_experience(self, user_id: uuid.UUID, data: dict[str, Any]) -> WorkExperience:
+        title = data.get("job_title")
+        org = data.get("organization")
+        cat = data.get("category", "Employment")
+        if title and org:
+            stmt = select(WorkExperience).where(
+                WorkExperience.user_id == user_id,
+                WorkExperience.job_title.ilike(title.strip()),
+                WorkExperience.organization.ilike(org.strip()),
+                WorkExperience.category == cat,
+            )
+            res = await self.session.execute(stmt)
+            existing = res.scalars().first()
+            if existing:
+                for k, v in data.items():
+                    if hasattr(existing, k) and v is not None:
+                        setattr(existing, k, v)
+                await self.session.flush()
+                return existing
+
         work = WorkExperience(user_id=user_id, **data)
         self.session.add(work)
         await self.session.flush()
         return work
+
+    async def update_work_experience(
+        self, user_id: uuid.UUID, exp_id: uuid.UUID, data: dict[str, Any]
+    ) -> WorkExperience | None:
+        stmt = select(WorkExperience).where(
+            WorkExperience.id == exp_id, WorkExperience.user_id == user_id
+        )
+        res = await self.session.execute(stmt)
+        record = res.scalar_one_or_none()
+        if not record:
+            return None
+        for k, v in data.items():
+            if hasattr(record, k) and v is not None:
+                setattr(record, k, v)
+        await self.session.flush()
+        return record
+
+    async def delete_work_experience(self, user_id: uuid.UUID, exp_id: uuid.UUID) -> bool:
+        stmt = select(WorkExperience).where(
+            WorkExperience.id == exp_id, WorkExperience.user_id == user_id
+        )
+        res = await self.session.execute(stmt)
+        record = res.scalar_one_or_none()
+        if record:
+            await self.session.delete(record)
+            await self.session.flush()
+            return True
+        return False
 
     # Research Experiences
     async def add_research_experience(

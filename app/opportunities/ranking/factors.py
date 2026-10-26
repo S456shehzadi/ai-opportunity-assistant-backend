@@ -888,3 +888,199 @@ class EligibilityCompletenessCalculator:
                 reason="One or more mandatory eligibility requirements are not satisfied.",
                 confidence=RecommendationConfidence.HIGH,
             )
+
+
+class ExperienceFitCalculator:
+    """Evaluates how well a user's experience history matches opportunity requirements.
+
+    Supports 12 experience categories: Employment, Internship, Freelance, Startup,
+    Research, Academic/Personal Projects, Volunteering, Leadership, Apprenticeship,
+    Teaching/Tutoring, Competitions/Hackathons, and Other.
+
+    Early-stage learners and opportunities without experience mandates are never penalized.
+    """
+
+    @classmethod
+    def calculate(
+        cls,
+        opp: Any,
+        user_facts: UnifiedUserFacts | None,
+    ) -> RankingFactorDetail:
+        category = get_opp_category(opp).lower()
+        title = get_opp_title(opp).lower()
+        desc = get_opp_description(opp).lower()
+
+        # Check for explicit experience requirement patterns in text
+        requires_formal_exp = False
+        min_years_required = 0.0
+
+        req_match = re.search(
+            r"(\d+)\+?\s*(?:-\s*(\d+))?\s*years?(?:\s+of)?(?:\s+(?:work|professional|relevant|research|industry|practical|hands-on|full-time)){0,3}\s+experience",
+            desc,
+        )
+        if req_match:
+            try:
+                min_years_required = float(req_match.group(1))
+                requires_formal_exp = True
+            except (ValueError, TypeError):
+                min_years_required = 0.0
+
+        if not user_facts:
+            return RankingFactorDetail(
+                factor_type=RankingFactorType.EXPERIENCE_FIT,
+                score=0.75 if requires_formal_exp else 0.85,
+                status="NEUTRAL",
+                reason="Experience profile not provided; evaluated neutrally.",
+                confidence=RecommendationConfidence.LOW,
+            )
+
+        categories = user_facts.experience_categories or []
+        user_years = user_facts.work_experience_years or 0.0
+        exp_items = user_facts.experience_items or []
+        has_any_exp = bool(categories or exp_items or user_years > 0)
+
+        # Explicit work experience requirements take precedence when specified
+        if requires_formal_exp and min_years_required > 0:
+            if user_years >= min_years_required:
+                return RankingFactorDetail(
+                    factor_type=RankingFactorType.EXPERIENCE_FIT,
+                    score=1.0,
+                    status="HIGH",
+                    reason=f"Candidate has {user_years:.1f} years experience, meeting the {min_years_required:.0f} year requirement.",
+                    confidence=RecommendationConfidence.HIGH,
+                )
+            elif user_years > 0 or has_any_exp:
+                deficit_ratio = user_years / min_years_required if min_years_required > 0 else 0.5
+                score = round(max(0.60, min(0.85, 0.55 + deficit_ratio * 0.35)), 2)
+                return RankingFactorDetail(
+                    factor_type=RankingFactorType.EXPERIENCE_FIT,
+                    score=score,
+                    status="MEDIUM",
+                    reason=f"Candidate has {user_years:.1f} years of relevant experience toward {min_years_required:.0f} year recommendation.",
+                    confidence=RecommendationConfidence.MEDIUM,
+                )
+            else:
+                return RankingFactorDetail(
+                    factor_type=RankingFactorType.EXPERIENCE_FIT,
+                    score=0.45,
+                    status="LOW",
+                    reason=f"Opportunity recommends {min_years_required:.0f}+ years experience; profile has no recorded experience.",
+                    confidence=RecommendationConfidence.HIGH,
+                )
+
+        # Check opportunity nature
+        is_internship = (
+            "internship" in category
+            or "intern" in title
+            or "apprentice" in category
+            or "apprentice" in title
+            or "trainee" in title
+        )
+        is_research_opp = (
+            "research" in category
+            or "research" in title
+            or "fellowship" in category
+            or "lab" in title
+        )
+        is_volunteer_opp = (
+            "volunteer" in category or "volunteer" in title or "community" in title
+        )
+        is_competition_opp = (
+            "competition" in category
+            or "hackathon" in title
+            or "contest" in title
+            or "challenge" in title
+        )
+
+        # Matching specific categories
+        if is_internship:
+            if user_facts.has_internship or any("intern" in c.lower() for c in categories):
+                return RankingFactorDetail(
+                    factor_type=RankingFactorType.EXPERIENCE_FIT,
+                    score=1.0,
+                    status="HIGH",
+                    reason="Previous internship experience is a strong direct match.",
+                    confidence=RecommendationConfidence.HIGH,
+                )
+            if (
+                any("project" in c.lower() for c in categories)
+                or user_facts.has_freelance
+                or user_facts.has_leadership
+                or user_facts.has_volunteering
+            ):
+                return RankingFactorDetail(
+                    factor_type=RankingFactorType.EXPERIENCE_FIT,
+                    score=0.92,
+                    status="HIGH",
+                    reason="Project, freelance, or leadership portfolio demonstrates practical competency for internship roles.",
+                    confidence=RecommendationConfidence.HIGH,
+                )
+            return RankingFactorDetail(
+                factor_type=RankingFactorType.EXPERIENCE_FIT,
+                score=0.82,
+                status="HIGH",
+                reason="Internship designed for students and learners; suitable entry point.",
+                confidence=RecommendationConfidence.MEDIUM,
+            )
+
+        if is_research_opp:
+            if user_facts.has_research_experience or any("research" in c.lower() for c in categories):
+                return RankingFactorDetail(
+                    factor_type=RankingFactorType.EXPERIENCE_FIT,
+                    score=1.0,
+                    status="HIGH",
+                    reason="Verified research background matches fellowship requirements.",
+                    confidence=RecommendationConfidence.HIGH,
+                )
+            if any("project" in c.lower() for c in categories) or user_facts.publication_count > 0:
+                return RankingFactorDetail(
+                    factor_type=RankingFactorType.EXPERIENCE_FIT,
+                    score=0.88,
+                    status="HIGH",
+                    reason="Academic or personal projects demonstrate analytical and research capability.",
+                    confidence=RecommendationConfidence.MEDIUM,
+                )
+
+        if is_volunteer_opp:
+            if user_facts.has_volunteering or any(
+                "volunt" in c.lower() or "community" in c.lower() for c in categories
+            ):
+                return RankingFactorDetail(
+                    factor_type=RankingFactorType.EXPERIENCE_FIT,
+                    score=1.0,
+                    status="HIGH",
+                    reason="Demonstrated community service and volunteer history.",
+                    confidence=RecommendationConfidence.HIGH,
+                )
+
+        if is_competition_opp:
+            if user_facts.has_competitions or any(
+                "compet" in c.lower() or "hackathon" in c.lower() for c in categories
+            ):
+                return RankingFactorDetail(
+                    factor_type=RankingFactorType.EXPERIENCE_FIT,
+                    score=1.0,
+                    status="HIGH",
+                    reason="Proven track record in competitions, hackathons, or challenges.",
+                    confidence=RecommendationConfidence.HIGH,
+                )
+
+        # General opportunities (Scholarships, general programs, grants):
+        # Having experience is a bonus, having none is not penalized
+        if has_any_exp:
+            cats_label = ", ".join(categories[:3]) if categories else "experience"
+            return RankingFactorDetail(
+                factor_type=RankingFactorType.EXPERIENCE_FIT,
+                score=0.95,
+                status="HIGH",
+                reason=f"Extracurricular and professional history ({cats_label}) strengthens application.",
+                confidence=RecommendationConfidence.HIGH,
+            )
+
+        return RankingFactorDetail(
+            factor_type=RankingFactorType.EXPERIENCE_FIT,
+            score=0.88,
+            status="HIGH",
+            reason="Opportunity does not mandate prior work experience; open to all experience backgrounds.",
+            confidence=RecommendationConfidence.MEDIUM,
+        )

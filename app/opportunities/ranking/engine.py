@@ -16,6 +16,7 @@ from app.opportunities.ranking.factors import (
     DeadlineRelevanceCalculator,
     DegreeLevelFitCalculator,
     EligibilityCompletenessCalculator,
+    ExperienceFitCalculator,
     FieldFitCalculator,
     FundingFitCalculator,
     LocationFitCalculator,
@@ -114,6 +115,7 @@ class PersonalizedRankingEngine:
             source_fac = SourceQualityCalculator.calculate(opp)
             query_fac = QueryRelevanceCalculator.calculate(opp, context.search_intent)
             elig_completeness_fac = EligibilityCompletenessCalculator.calculate(elig)
+            exp_fac = ExperienceFitCalculator.calculate(opp, user_facts)
 
             factors_map: dict[RankingFactorType, RankingFactorDetail] = {
                 RankingFactorType.ACADEMIC_FIT: academic_fac,
@@ -126,6 +128,7 @@ class PersonalizedRankingEngine:
                 RankingFactorType.SOURCE_QUALITY: source_fac,
                 RankingFactorType.QUERY_RELEVANCE: query_fac,
                 RankingFactorType.ELIGIBILITY_COMPLETENESS: elig_completeness_fac,
+                RankingFactorType.EXPERIENCE_FIT: exp_fac,
             }
 
             # Apply Soft Preference Boosts where applicable
