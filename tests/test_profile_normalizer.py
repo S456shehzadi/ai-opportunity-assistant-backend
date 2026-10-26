@@ -112,7 +112,7 @@ def test_profile_normalizer_generates_ai_context() -> None:
     assert ai_context.user_id == user_id
     assert ai_context.is_profile_complete is True
     assert ai_context.demographics.nationality == "Pakistan"
-    assert ai_context.academics.highest_education_level == "Master's"
+    assert "Master" in ai_context.academics.highest_education_level
     assert "Computer Science" in ai_context.academics.fields_of_study
     assert ai_context.standardized_tests.test_scores["IELTS"] == "8.0"
     assert "Deep Learning" in ai_context.skills

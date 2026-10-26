@@ -126,10 +126,20 @@ class QueryUnderstandingService(IQueryUnderstandingModel):
     ]
 
     DEGREE_PATTERNS = [
-        (r"\b(master'?s?|m\.?sc?|postgraduate|graduate)\b", "Master's"),
-        (r"\b(ph\.?d|doctorate|doctoral)\b", "Doctorate"),
-        (r"\b(postdoc|postdoctoral)\b", "Postdoc"),
-        (r"\b(bachelor'?s?|b\.?sc?|undergraduate)\b", "Bachelor's"),
+        (r"\b(postdoc|postdoctoral(\s+research)?)\b", "Postdoctoral Research"),
+        (r"\b(ph\.?d|doctorate|doctoral|dphil)\b", "PhD / Doctorate"),
+        (r"\b(master'?s?|m\.?sc?|postgraduate|graduate|mba|m\.?eng|m\.?phil)\b", "Master's / Postgraduate"),
+        (r"\b(bachelor'?s?|b\.?sc?|undergraduate|b\.?eng|bba)\b", "Bachelor's / Undergraduate"),
+        (r"\b(associate'?s?(\s+degree)?|dae|diploma)\b", "Diploma / Associate Degree"),
+        (r"\b(vocational|trade\s+school|apprenticeship|technical\s+training|certificate)\b", "Certificate / Vocational Training"),
+        (r"\b(intermediate|hssc|f\.?sc|f\.?a|ics|i\.?com|higher\s+secondary)\b", "Intermediate / Higher Secondary"),
+        (r"\b(a-?levels?|ib\s+diploma|ibdp|international\s+baccalaureate)\b", "A-Levels / IB Diploma / Equivalent"),
+        (r"\b(matric(ulation)?|ssc|gcse|o-?levels?|secondary\s+school)\b", "Matriculation / Secondary School"),
+        (r"\b(high\s*school)\b", "High School"),
+        (r"\b(middle\s+school|junior\s+high|lower\s+secondary)\b", "Middle School / Lower Secondary"),
+        (r"\b(primary\s+school|elementary\s+school)\b", "Primary / Elementary School"),
+        (r"\b(professional\s+qualification|acca|cpa|cfa|chartered)\b", "Professional Qualification"),
+        (r"\b(no\s+degree|without\s+degree|no\s+formal\s+qualification|any\s+education)\b", "No Formal Qualification / Other"),
     ]
 
     AUDIENCE_PATTERNS = [

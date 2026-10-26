@@ -20,23 +20,83 @@ from app.services.normalization.geo_normalizer import GeoNormalizer
 
 
 class AcademicEvaluator:
-    """Evaluates academic performance, degree levels, and disciplines."""
+    """Evaluates academic performance, degree levels, and disciplines across all global education levels."""
 
     DEGREE_HIERARCHY = {
-        "high school": 1,
-        "associate": 2,
-        "bachelor's": 3,
-        "bachelor": 3,
-        "undergraduate": 3,
-        "master's": 4,
-        "master": 4,
-        "graduate": 4,
-        "postgraduate": 4,
-        "phd": 5,
-        "doctorate": 5,
-        "doctoral": 5,
-        "postdoctoral": 6,
-        "postdoc": 6,
+        # Primary & Middle School
+        "primary": 1,
+        "elementary": 1,
+        "primary / elementary school": 1,
+        "middle school": 2,
+        "junior high": 2,
+        "lower secondary": 2,
+        "middle school / lower secondary": 2,
+        # Matriculation / Secondary School
+        "matriculation": 3,
+        "matric": 3,
+        "ssc": 3,
+        "gcse": 3,
+        "o-level": 3,
+        "o-levels": 3,
+        "secondary school": 3,
+        "matriculation / secondary school": 3,
+        # Intermediate / Higher Secondary
+        "intermediate": 4,
+        "hssc": 4,
+        "fsc": 4,
+        "fa": 4,
+        "ics": 4,
+        "icom": 4,
+        "higher secondary": 4,
+        "intermediate / higher secondary": 4,
+        "high school": 4,
+        # A-Levels / IB Diploma
+        "a-level": 5,
+        "a-levels": 5,
+        "ib diploma": 5,
+        "ibdp": 5,
+        "abitur": 5,
+        "a-levels / ib diploma / equivalent": 5,
+        # Vocational & Technical
+        "vocational": 6,
+        "technical": 6,
+        "trade": 6,
+        "apprenticeship": 6,
+        "certificate / vocational training": 6,
+        # Diploma & Associate Degree
+        "diploma": 7,
+        "associate": 7,
+        "associate degree": 7,
+        "dae": 7,
+        "hnd": 7,
+        "diploma / associate degree": 7,
+        # Undergraduate
+        "bachelor's": 8,
+        "bachelor": 8,
+        "undergraduate": 8,
+        "bachelor's / undergraduate": 8,
+        # Postgraduate / Master's
+        "master's": 9,
+        "master": 9,
+        "graduate": 9,
+        "postgraduate": 9,
+        "master's / postgraduate": 9,
+        # Doctorate / PhD
+        "phd": 10,
+        "doctorate": 10,
+        "doctoral": 10,
+        "phd / doctorate": 10,
+        # Postdoctoral
+        "postdoctoral": 11,
+        "postdoc": 11,
+        "postdoctoral research": 11,
+        # Professional
+        "professional qualification": 12,
+        "professional": 12,
+        # No formal
+        "no formal qualification / other": 0,
+        "no formal qualification": 0,
+        "other": 0,
     }
 
     @classmethod
@@ -192,19 +252,43 @@ class AcademicEvaluator:
     def evaluate_degree_level(
         cls, user_facts: UnifiedUserFacts, req: OpportunityRequirementItem
     ) -> RequirementEvaluation:
-        """Evaluates whether user holds or pursues an eligible degree level."""
+        """Evaluates whether user holds or pursues an eligible degree level across all global tiers."""
         allowed_degrees = (
             req.required_value
             if isinstance(req.required_value, list)
-            else [str(req.required_value)]
+            else ([str(req.required_value)] if req.required_value is not None else [])
         )
+
+        # 1. Check for opportunities open to any/all educational backgrounds
+        is_empty_req = not allowed_degrees or not any(str(d).strip() for d in allowed_degrees)
+        is_open_in_desc = any(term in (req.description or "").lower() for term in ("open to all", "all ages", "all backgrounds", "all education", "no degree"))
+        is_open_in_allowed = any(any(term in str(d).lower() for term in ("any", "open", "no formal", "all backgrounds", "all education", "not required")) for d in allowed_degrees)
+
+        if is_empty_req or is_open_in_desc or is_open_in_allowed:
+            msg = "Opportunity is open to all educational backgrounds."
+            return RequirementEvaluation(
+                requirement_id=req.requirement_id,
+                requirement_type="degree_level",
+                requirement_description=req.description,
+                status=RequirementStatus.MATCH,
+                priority=req.priority,
+                user_value="All levels accepted",
+                required_value=allowed_degrees,
+                comparison="Open to all educational backgrounds",
+                user_evidence=None,
+                opportunity_evidence=req.opportunity_evidence,
+                explanation=msg,
+                structured_explanation=ExplanationBuilder.match(msg),
+                confidence=EligibilityConfidence.HIGH,
+            )
+
         allowed_normalized = [cls._normalize_degree(d) for d in allowed_degrees]
 
-        # Scan all user degrees
+        # Scan all user degrees across all records
         user_degrees: list[str] = []
         user_evidences = []
         for rec in user_facts.academic_records:
-            deg = rec.get("normalized_degree_level") or rec.get("degree_title")
+            deg = rec.get("normalized_degree_level") or rec.get("degree_title") or rec.get("degree")
             if deg:
                 norm_deg = cls._normalize_degree(deg)
                 user_degrees.append(norm_deg)
@@ -216,6 +300,18 @@ class AcademicEvaluator:
                         context=rec.get("institution") or rec.get("field_of_study"),
                     )
                 )
+
+        # Fallback to highest_degree_level if records list is empty
+        if not user_degrees and user_facts.highest_degree_level:
+            norm_deg = cls._normalize_degree(user_facts.highest_degree_level)
+            user_degrees.append(norm_deg)
+            user_evidences.append(
+                EligibilityEvidenceLinker.create_user_evidence(
+                    source_section="education",
+                    field_name="degree_level",
+                    value=user_facts.highest_degree_level,
+                )
+            )
 
         if not user_degrees:
             return RequirementEvaluation(
@@ -236,27 +332,52 @@ class AcademicEvaluator:
                 opportunity_evidence=req.opportunity_evidence,
             )
 
-        # Check for intersection or hierarchy entry progression
+        # Direct match across any qualification in user history
         matched_degrees = [d for d in user_degrees if d in allowed_normalized]
         if not matched_degrees:
-            # Check progression in degree hierarchy (e.g. Bachelor's qualifies for Master's program)
+            # Check progression in degree hierarchy
             user_ranks = [cls.DEGREE_HIERARCHY.get(d.lower(), 0) for d in user_degrees]
             req_ranks = [cls.DEGREE_HIERARCHY.get(d.lower(), 0) for d in allowed_normalized]
             max_user_rank = max(user_ranks) if user_ranks else 0
             min_req_rank = min(req_ranks) if req_ranks else 0
 
-            # Direct entry progression: user has required degree or immediate prior degree
-            if max_user_rank > 0 and (
-                max_user_rank == min_req_rank or max_user_rank == min_req_rank - 1
-            ):
+            is_progression = False
+            if max_user_rank > 0 and min_req_rank > 0:
+                if max_user_rank == min_req_rank:
+                    is_progression = True
+                elif min_req_rank == 8 and max_user_rank in (4, 5, 7):
+                    # Intermediate (4), A-Levels (5), or Associate/DAE (7) qualifies for Bachelor's (8)
+                    is_progression = True
+                elif min_req_rank in (4, 5) and max_user_rank == 3:
+                    # Matriculation (3) qualifies for Intermediate / Higher Secondary entry
+                    is_progression = True
+                elif min_req_rank == 9 and max_user_rank == 8:
+                    # Bachelor's (8) qualifies for Master's (9)
+                    is_progression = True
+                elif min_req_rank == 10 and max_user_rank in (8, 9):
+                    # Master's (9) or Honors Bachelor's (8) qualifies for Doctorate / PhD (10)
+                    is_progression = True
+                elif min_req_rank == 11 and max_user_rank == 10:
+                    # PhD (10) qualifies for Postdoc (11)
+                    is_progression = True
+                elif min_req_rank == 6 and max_user_rank in (1, 2, 3, 4, 6, 7):
+                    # School or intermediate education qualifies for Vocational / Trade courses
+                    is_progression = True
+                elif min_req_rank in (1, 2, 3, 4) and max_user_rank in (1, 2, 3, 4):
+                    # School level cross-eligibility if opportunity is general school scholarship
+                    if "school" in req.description.lower() or "secondary" in req.description.lower():
+                        is_progression = True
+
+            if is_progression:
                 best_idx = user_ranks.index(max_user_rank)
                 matched_degrees = [user_degrees[best_idx]]
 
         if matched_degrees:
-            user_ev = user_evidences[user_degrees.index(matched_degrees[0])]
+            matched_deg = matched_degrees[0]
+            user_ev = user_evidences[user_degrees.index(matched_deg)]
             deg_targets = ", ".join(allowed_degrees)
             msg = (
-                f"Your degree level ({matched_degrees[0]}) satisfies the requirement "
+                f"Your education level ({matched_deg}) satisfies the eligibility requirement "
                 f"for {deg_targets}."
             )
             return RequirementEvaluation(
@@ -265,9 +386,9 @@ class AcademicEvaluator:
                 requirement_description=req.description,
                 status=RequirementStatus.MATCH,
                 priority=req.priority,
-                user_value=matched_degrees[0],
+                user_value=matched_deg,
                 required_value=allowed_degrees,
-                comparison=f"{matched_degrees[0]} qualifies for {allowed_normalized}",
+                comparison=f"{matched_deg} satisfies {allowed_normalized}",
                 user_evidence=user_ev,
                 opportunity_evidence=req.opportunity_evidence,
                 explanation=msg,
@@ -277,7 +398,7 @@ class AcademicEvaluator:
 
         user_deg_str = ", ".join(set(user_degrees))
         req_deg_str = ", ".join(allowed_degrees)
-        msg = f"Your degrees ({user_deg_str}) do not match required level(s): {req_deg_str}."
+        msg = f"Your declared education ({user_deg_str}) does not match required level(s): {req_deg_str}."
         return RequirementEvaluation(
             requirement_id=req.requirement_id,
             requirement_type="degree_level",
@@ -390,18 +511,9 @@ class AcademicEvaluator:
 
     @classmethod
     def _normalize_degree(cls, deg: str) -> str:
-        d = deg.lower().strip()
-        for k, v in cls.DEGREE_HIERARCHY.items():
-            if k in d:
-                if v == 3:
-                    return "Bachelor's"
-                if v == 4:
-                    return "Master's"
-                if v == 5:
-                    return "PhD"
-                if v == 6:
-                    return "Postdoctoral"
-        return deg
+        if not deg:
+            return "No Formal Qualification / Other"
+        return EducationNormalizer.normalize_degree_level(deg)
 
 
 class NationalityResidencyEvaluator:

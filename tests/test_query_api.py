@@ -12,7 +12,7 @@ async def test_api_query_understand(client: AsyncClient) -> None:
     data = res.json()
     assert data["intent_type"] == "find_scholarships"
     assert "Europe" in data["regions"]
-    assert "Master's" in data["degree_levels"]
+    assert any("Master" in d for d in data["degree_levels"])
     assert data["funding_constraints"][0]["is_fully_funded"] is True
 
 

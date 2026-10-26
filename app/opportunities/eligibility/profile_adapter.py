@@ -221,27 +221,39 @@ class ProfileAdapter:
             getattr(db_profile, "user", None), "academic_records", []
         )
         for r in db_records:
+            deg = (
+                getattr(r, "education_level", None)
+                or getattr(r, "degree_level", None)
+                or getattr(r, "degree_title", None)
+                or getattr(r, "degree", None)
+            )
             records.append(
                 {
-                    "normalized_degree_level": getattr(r, "degree_level", None)
-                    or getattr(r, "degree_title", None),
-                    "degree_title": getattr(r, "degree_title", None),
+                    "normalized_degree_level": deg,
+                    "degree_title": getattr(r, "degree", None) or getattr(r, "degree_title", None),
                     "field_of_study": getattr(r, "field_of_study", None),
-                    "cgpa": getattr(r, "cgpa", None),
+                    "academic_stream": getattr(r, "academic_stream", None),
+                    "status": getattr(r, "status", None),
+                    "cgpa": getattr(r, "cgpa", None) or getattr(r, "grade", None),
                     "percentage": getattr(r, "percentage", None),
                     "institution": getattr(r, "institution", None),
+                    "country": getattr(r, "country", None),
+                    "is_current": getattr(r, "is_current", False),
+                    "is_highest": getattr(r, "is_highest", False),
                 }
             )
 
         # Also add summary from user_profile itself if present
         if getattr(db_profile, "degree_title", None) or getattr(
             db_profile, "education_level", None
-        ):
+        ) or getattr(db_profile, "current_education_level", None):
             records.append(
                 {
-                    "normalized_degree_level": getattr(db_profile, "education_level", None),
+                    "normalized_degree_level": getattr(db_profile, "current_education_level", None)
+                    or getattr(db_profile, "education_level", None),
                     "degree_title": getattr(db_profile, "degree_title", None),
                     "field_of_study": getattr(db_profile, "field_of_study", None),
+                    "status": getattr(db_profile, "education_status", None),
                     "cgpa": getattr(db_profile, "cgpa", None),
                     "percentage": getattr(db_profile, "percentage", None),
                     "institution": getattr(db_profile, "university", None),

@@ -44,21 +44,31 @@ def test_geo_normalizer_regions_and_membership() -> None:
 
 
 def test_education_normalizer_degree_levels() -> None:
-    assert EducationNormalizer.normalize_degree_level("Bachelor of Science in CS") == "Bachelor's"
-    assert EducationNormalizer.normalize_degree_level("BS Computer Science") == "Bachelor's"
-    assert EducationNormalizer.normalize_degree_level("B.Sc. Software Engineering") == "Bachelor's"
-    assert EducationNormalizer.normalize_degree_level("Undergraduate degree") == "Bachelor's"
+    assert EducationNormalizer.normalize_degree_level("Bachelor of Science in CS") == EducationNormalizer.LEVEL_BACHELORS
+    assert EducationNormalizer.normalize_degree_level("BS Computer Science") == EducationNormalizer.LEVEL_BACHELORS
+    assert EducationNormalizer.normalize_degree_level("B.Sc. Software Engineering") == EducationNormalizer.LEVEL_BACHELORS
+    assert EducationNormalizer.normalize_degree_level("Undergraduate degree") == EducationNormalizer.LEVEL_BACHELORS
 
-    assert EducationNormalizer.normalize_degree_level("Master of Science") == "Master's"
-    assert EducationNormalizer.normalize_degree_level("MS Artificial Intelligence") == "Master's"
-    assert EducationNormalizer.normalize_degree_level("MSc Data Science") == "Master's"
-    assert EducationNormalizer.normalize_degree_level("Postgraduate diploma/degree") == "Master's"
+    assert EducationNormalizer.normalize_degree_level("Master of Science") == EducationNormalizer.LEVEL_MASTERS
+    assert EducationNormalizer.normalize_degree_level("MS Artificial Intelligence") == EducationNormalizer.LEVEL_MASTERS
+    assert EducationNormalizer.normalize_degree_level("MSc Data Science") == EducationNormalizer.LEVEL_MASTERS
+    assert EducationNormalizer.normalize_degree_level("Postgraduate diploma/degree") == EducationNormalizer.LEVEL_MASTERS
 
-    assert EducationNormalizer.normalize_degree_level("PhD in Machine Learning") == "Doctorate"
-    assert EducationNormalizer.normalize_degree_level("Doctor of Philosophy") == "Doctorate"
-    assert EducationNormalizer.normalize_degree_level("Doctoral Candidate") == "Doctorate"
+    assert EducationNormalizer.normalize_degree_level("PhD in Machine Learning") == EducationNormalizer.LEVEL_DOCTORATE
+    assert EducationNormalizer.normalize_degree_level("Doctor of Philosophy") == EducationNormalizer.LEVEL_DOCTORATE
+    assert EducationNormalizer.normalize_degree_level("Doctoral Candidate") == EducationNormalizer.LEVEL_DOCTORATE
 
-    assert EducationNormalizer.normalize_degree_level("Postdoctoral Fellow") == "Postdoc"
+    assert EducationNormalizer.normalize_degree_level("Postdoctoral Fellow") == EducationNormalizer.LEVEL_POSTDOCTORAL
+
+    # Worldwide Levels
+    assert EducationNormalizer.normalize_degree_level("Matriculation Science") == EducationNormalizer.LEVEL_MATRICULATION
+    assert EducationNormalizer.normalize_degree_level("FSc Pre-Engineering") == EducationNormalizer.LEVEL_INTERMEDIATE
+    assert EducationNormalizer.normalize_degree_level("A-Levels STEM") == EducationNormalizer.LEVEL_A_LEVELS_IB
+    assert EducationNormalizer.normalize_degree_level("DAE Mechanical") == EducationNormalizer.LEVEL_ASSOCIATE
+    assert EducationNormalizer.normalize_degree_level("ACCA Member") == EducationNormalizer.LEVEL_PROFESSIONAL
+    assert EducationNormalizer.normalize_degree_level("Middle School 8th Grade") == EducationNormalizer.LEVEL_MIDDLE_SCHOOL
+    assert EducationNormalizer.normalize_degree_level("Primary School 5th Grade") == EducationNormalizer.LEVEL_PRIMARY
+    assert EducationNormalizer.normalize_degree_level("Self-Taught Developer") == EducationNormalizer.LEVEL_NO_FORMAL
 
 
 def test_education_normalizer_field_taxonomy() -> None:

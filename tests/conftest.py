@@ -9,6 +9,7 @@ from app.core.config import AppEnvironment, Settings, get_settings
 from app.core.database import get_db_session
 from app.main import create_application
 from app.models.base import Base
+import app.models  # noqa: F401
 
 
 @pytest.fixture

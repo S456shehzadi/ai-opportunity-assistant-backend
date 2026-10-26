@@ -19,6 +19,8 @@ class UserProfileBase(BaseModel):
     date_of_birth: date | None = None
 
     education_level: EducationLevel | None = None
+    current_education_level: EducationLevel | None = None
+    education_status: str | None = Field(default=None, max_length=50)
     degree_title: str | None = Field(default=None, max_length=200)
     field_of_study: str | None = Field(default=None, max_length=200)
     university: str | None = Field(default=None, max_length=255)
@@ -45,6 +47,8 @@ class UserProfileUpdate(BaseModel):
     city: str | None = Field(default=None, max_length=100)
     date_of_birth: date | None = None
     education_level: EducationLevel | None = None
+    current_education_level: EducationLevel | None = None
+    education_status: str | None = Field(default=None, max_length=50)
     degree_title: str | None = Field(default=None, max_length=200)
     field_of_study: str | None = Field(default=None, max_length=200)
     university: str | None = Field(default=None, max_length=255)
@@ -64,15 +68,20 @@ class UserProfileRead(UserProfileBase):
 
 # Academic Records
 class AcademicRecordBase(BaseModel):
-    institution: str = Field(min_length=2, max_length=255)
-    degree: str = Field(min_length=2, max_length=200)
-    field_of_study: str = Field(min_length=2, max_length=200)
+    institution: str = Field(default="School / Institution", max_length=255)
+    degree: str = Field(default="General Qualification", max_length=200)
+    field_of_study: str = Field(default="General", max_length=200)
+    education_level: EducationLevel | None = None
+    academic_stream: str | None = Field(default=None, max_length=100)
+    status: str | None = Field(default=None, max_length=50)
+    grading_system: str | None = Field(default=None, max_length=50)
     start_year: int | None = Field(default=None, ge=1950, le=2100)
     end_year: int | None = Field(default=None, ge=1950, le=2100)
     grade: str | None = Field(default=None, max_length=50)
     grading_scale: str | None = Field(default=None, max_length=50)
     country: str | None = Field(default=None, max_length=100)
     is_current: bool = False
+    is_highest: bool = False
 
     @model_validator(mode="after")
     def validate_year_range(self) -> "AcademicRecordBase":
@@ -86,15 +95,20 @@ class AcademicRecordCreate(AcademicRecordBase):
 
 
 class AcademicRecordUpdate(BaseModel):
-    institution: str | None = Field(default=None, min_length=2, max_length=255)
-    degree: str | None = Field(default=None, min_length=2, max_length=200)
-    field_of_study: str | None = Field(default=None, min_length=2, max_length=200)
+    institution: str | None = Field(default=None, max_length=255)
+    degree: str | None = Field(default=None, max_length=200)
+    field_of_study: str | None = Field(default=None, max_length=200)
+    education_level: EducationLevel | None = None
+    academic_stream: str | None = Field(default=None, max_length=100)
+    status: str | None = Field(default=None, max_length=50)
+    grading_system: str | None = Field(default=None, max_length=50)
     start_year: int | None = Field(default=None, ge=1950, le=2100)
     end_year: int | None = Field(default=None, ge=1950, le=2100)
     grade: str | None = Field(default=None, max_length=50)
     grading_scale: str | None = Field(default=None, max_length=50)
     country: str | None = Field(default=None, max_length=100)
     is_current: bool | None = None
+    is_highest: bool | None = None
 
 
 class AcademicRecordRead(AcademicRecordBase):

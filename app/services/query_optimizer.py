@@ -52,9 +52,9 @@ class QueryOptimizer:
 
         # Excluded terms to reduce noise
         excluded: list[str] = ["expired", "closed"]
-        if "Master's" in degree_terms:
+        if any("master" in d.lower() for d in degree_terms):
             excluded.extend(["bachelor", "undergraduate"])
-        elif "Bachelor's" in degree_terms:
+        elif any("bachelor" in d.lower() for d in degree_terms):
             excluded.extend(["master", "phd", "doctorate"])
 
         queries.append(

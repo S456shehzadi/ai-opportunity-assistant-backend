@@ -77,46 +77,49 @@ async def discovery_search(
 
     # Resilient relational database fallback
     if not cards and request.query.strip():
-        from sqlalchemy import or_, select
-        from app.core.database import async_session_factory
-        from app.models.opportunity import Opportunity
+        try:
+            from sqlalchemy import or_, select
+            from app.core.database import async_session_factory
+            from app.models.opportunity import Opportunity
 
-        async with async_session_factory() as session:
-            q_clean = request.query.strip()
-            pattern = f"%{q_clean}%"
-            stmt = (
-                select(Opportunity)
-                .where(
-                    or_(
-                        Opportunity.title.ilike(pattern),
-                        Opportunity.organization.ilike(pattern),
-                        Opportunity.description.ilike(pattern),
-                        Opportunity.country.ilike(pattern),
+            async with async_session_factory() as session:
+                q_clean = request.query.strip()
+                pattern = f"%{q_clean}%"
+                stmt = (
+                    select(Opportunity)
+                    .where(
+                        or_(
+                            Opportunity.title.ilike(pattern),
+                            Opportunity.organization.ilike(pattern),
+                            Opportunity.description.ilike(pattern),
+                            Opportunity.country.ilike(pattern),
+                        )
                     )
+                    .limit(request.limit)
                 )
-                .limit(request.limit)
-            )
-            res = await session.execute(stmt)
-            sql_opps = res.scalars().all()
-            for opp in sql_opps:
-                cards.append(
-                    DiscoveryOpportunityCard(
-                        opportunity_id=str(opp.id),
-                        title=opp.title,
-                        provider=opp.organization,
-                        category=opp.category.value if hasattr(opp.category, "value") else str(opp.category),
-                        funding_summary=opp.funding_amount or opp.funding_type,
-                        deadline=opp.deadline.isoformat() if opp.deadline else None,
-                        status=opp.status.value if hasattr(opp.status, "value") else str(opp.status),
-                        degree_levels=opp.degree_levels or [],
-                        fields=opp.fields or [],
-                        country=opp.country,
-                        source_url=opp.official_source_url,
-                        source_type="Official Website",
-                        fit_indicator="Top Match",
-                        alternative_source_urls=[],
+                res = await session.execute(stmt)
+                sql_opps = res.scalars().all()
+                for opp in sql_opps:
+                    cards.append(
+                        DiscoveryOpportunityCard(
+                            opportunity_id=str(opp.id),
+                            title=opp.title,
+                            provider=opp.organization,
+                            category=opp.category.value if hasattr(opp.category, "value") else str(opp.category),
+                            funding_summary=opp.funding_amount or opp.funding_type,
+                            deadline=opp.deadline.isoformat() if opp.deadline else None,
+                            status=opp.status.value if hasattr(opp.status, "value") else str(opp.status),
+                            degree_levels=opp.degree_levels or [],
+                            fields=opp.fields or [],
+                            country=opp.country,
+                            source_url=opp.official_source_url,
+                            source_type="Official Website",
+                            fit_indicator="Top Match",
+                            alternative_source_urls=[],
+                        )
                     )
-                )
+        except Exception:
+            pass
 
     return DiscoverySearchResponse(
         query=retrieval_res.query,

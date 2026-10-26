@@ -539,14 +539,34 @@ class DegreeLevelFitCalculator:
                     desired_levels.extend(str(v).lower() for v in val)
 
         if not desired_levels and user_facts:
-            # Infer next level from highest degree
+            # Check current and past qualifications across records
             current = (user_facts.highest_degree_level or "").lower()
-            if "bachelor" in current:
-                desired_levels.append("master")
-            elif "master" in current:
-                desired_levels.append("phd")
+            if any(rec.get("normalized_degree_level") for rec in user_facts.academic_records):
+                for rec in user_facts.academic_records:
+                    deg = (rec.get("normalized_degree_level") or rec.get("degree_title") or "").lower()
+                    if deg and deg not in desired_levels:
+                        desired_levels.append(deg)
+
+            if "bachelor" in current or "undergraduate" in current:
+                desired_levels.extend(["bachelor", "master"])
+            elif "master" in current or "postgraduate" in current:
+                desired_levels.extend(["master", "phd", "doctorate"])
+            elif "phd" in current or "doctorate" in current:
+                desired_levels.extend(["phd", "postdoc", "postdoctoral"])
+            elif "intermediate" in current or "fsc" in current or "ics" in current or "12th" in current:
+                desired_levels.extend(["intermediate", "higher secondary", "bachelor", "undergraduate"])
+            elif "matric" in current or "ssc" in current or "10th" in current or "gcse" in current or "o-level" in current:
+                desired_levels.extend(["matriculation", "secondary", "intermediate", "high school"])
+            elif "vocational" in current or "trade" in current:
+                desired_levels.extend(["vocational", "certificate", "associate", "diploma"])
+            elif "associate" in current or "dae" in current or "diploma" in current:
+                desired_levels.extend(["associate", "diploma", "bachelor"])
+            elif "middle" in current:
+                desired_levels.extend(["middle school", "secondary", "matriculation"])
+            elif "primary" in current or "elementary" in current:
+                desired_levels.extend(["primary", "elementary", "middle school"])
             elif "high school" in current:
-                desired_levels.append("bachelor")
+                desired_levels.extend(["high school", "intermediate", "bachelor"])
 
         if not desired_levels:
             return RankingFactorDetail(

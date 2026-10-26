@@ -75,10 +75,10 @@ def test_normalized_ai_profile_creation_and_unknowns() -> None:
     assert ai_profile.identity_context.residence_country_code == "DE"
 
     # 2. Education
-    assert ai_profile.academic_performance.highest_degree_level == "Bachelor's"
+    assert "Bachelor" in ai_profile.academic_performance.highest_degree_level
     assert ai_profile.academic_performance.normalized_gpa_4_scale == 3.85
     assert len(ai_profile.education) > 0
-    assert ai_profile.education[0].normalized_degree_level == "Bachelor's"
+    assert "Bachelor" in ai_profile.education[0].normalized_degree_level
     assert ai_profile.education[0].broad_discipline == "Computing & Information Technology"
 
     # 3. Tests: Missing IELTS MUST be marked as UNKNOWN (Never "No" or False)

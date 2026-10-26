@@ -19,7 +19,7 @@ def test_query_fully_funded_masters_scholarships_in_europe() -> None:
     assert intent.intent_type == UserIntentType.FIND_SCHOLARSHIPS
     assert "Scholarship" in intent.opportunity_categories
     assert "Europe" in intent.regions
-    assert "Master's" in intent.degree_levels
+    assert any("Master" in d for d in intent.degree_levels)
     assert "Computer Science" in intent.fields
 
     # Funding check: must be explicitly fully funded

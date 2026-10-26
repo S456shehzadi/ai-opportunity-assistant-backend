@@ -97,6 +97,25 @@ class ProfileRepository:
 
     # Academic Records
     async def add_academic_record(self, user_id: uuid.UUID, data: dict[str, Any]) -> AcademicRecord:
+        # Prevent duplicate records on repeated requests
+        deg = data.get("degree")
+        inst = data.get("institution")
+        field = data.get("field_of_study")
+        if deg and inst:
+            stmt = select(AcademicRecord).where(
+                AcademicRecord.user_id == user_id,
+                AcademicRecord.degree == deg,
+                AcademicRecord.institution == inst,
+            )
+            res = await self.session.execute(stmt)
+            existing = res.scalars().first()
+            if existing:
+                for k, v in data.items():
+                    if hasattr(existing, k) and v is not None:
+                        setattr(existing, k, v)
+                await self.session.flush()
+                return existing
+
         record = AcademicRecord(user_id=user_id, **data)
         self.session.add(record)
         await self.session.flush()

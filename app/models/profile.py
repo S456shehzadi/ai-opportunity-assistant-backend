@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 from datetime import date
 from enum import StrEnum
@@ -24,14 +26,60 @@ if TYPE_CHECKING:
 
 
 class EducationLevel(StrEnum):
+    """Normalized education levels covering all global education pathways."""
+
+    PRIMARY = "Primary / Elementary School"
+    MIDDLE_SCHOOL = "Middle School / Lower Secondary"
+    MATRICULATION = "Matriculation / Secondary School"
+    INTERMEDIATE = "Intermediate / Higher Secondary"
+    A_LEVELS_IB = "A-Levels / IB Diploma / Equivalent"
+    VOCATIONAL = "Certificate / Vocational Training"
+    ASSOCIATE = "Diploma / Associate Degree"
+    BACHELORS = "Bachelor's / Undergraduate"
+    MASTERS = "Master's / Postgraduate"
+    DOCTORATE = "PhD / Doctorate"
+    POSTDOCTORAL = "Postdoctoral Research"
+    PROFESSIONAL = "Professional Qualification"
+    NO_FORMAL = "No Formal Qualification / Other"
+
+    # Backward compatibility aliases
     HIGH_SCHOOL = "High School"
     UNDERGRADUATE = "Undergraduate"
     GRADUATE = "Graduate"
-    MASTERS = "Master's"
     PHD = "PhD"
-    POSTDOCTORAL = "Postdoctoral"
-    PROFESSIONAL = "Professional"
     OTHER = "Other"
+
+    @classmethod
+    def _missing_(cls, value: object) -> EducationLevel | None:
+        if isinstance(value, str):
+            val_norm = value.strip().lower()
+            if any(term in val_norm for term in ("master", "graduate", "msc", "ms ")):
+                return cls.MASTERS
+            if any(term in val_norm for term in ("bachelor", "undergraduate", "bsc", "bs ")):
+                return cls.BACHELORS
+            if any(term in val_norm for term in ("phd", "doctor")):
+                return cls.DOCTORATE
+            if "postdoc" in val_norm:
+                return cls.POSTDOCTORAL
+            if any(term in val_norm for term in ("intermediate", "fsc", "hssc", "12th", "fa ", "ics")):
+                return cls.INTERMEDIATE
+            if any(term in val_norm for term in ("matric", "ssc", "high school", "10th", "o-level", "gcse")):
+                return cls.MATRICULATION
+            if any(term in val_norm for term in ("a-level", "ib diploma", "baccalaureate")):
+                return cls.A_LEVELS_IB
+            if any(term in val_norm for term in ("vocational", "tvet", "trade")):
+                return cls.VOCATIONAL
+            if any(term in val_norm for term in ("associate", "dae", "adp", "diploma")):
+                return cls.ASSOCIATE
+            if "middle" in val_norm:
+                return cls.MIDDLE_SCHOOL
+            if any(term in val_norm for term in ("primary", "elementary")):
+                return cls.PRIMARY
+            if any(term in val_norm for term in ("professional", "acca", "ca ", "cfa")):
+                return cls.PROFESSIONAL
+            if any(term in val_norm for term in ("none", "informal", "self", "other")):
+                return cls.NO_FORMAL
+        return None
 
 
 class TestType(StrEnum):
@@ -74,9 +122,14 @@ class UserProfile(Base, UUIDMixin, TimestampMixin):
 
     # Primary Education Summary
     education_level: Mapped[EducationLevel | None] = mapped_column(
-        Enum(EducationLevel, native_enum=False, length=50),
+        Enum(EducationLevel, native_enum=False, length=60),
         nullable=True,
     )
+    current_education_level: Mapped[EducationLevel | None] = mapped_column(
+        Enum(EducationLevel, native_enum=False, length=60),
+        nullable=True,
+    )
+    education_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     degree_title: Mapped[str | None] = mapped_column(String(200), nullable=True)
     field_of_study: Mapped[str | None] = mapped_column(String(200), nullable=True)
     university: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -98,15 +151,23 @@ class AcademicRecord(Base, UUIDMixin, TimestampMixin):
         index=True,
         nullable=False,
     )
-    institution: Mapped[str] = mapped_column(String(255), nullable=False)
-    degree: Mapped[str] = mapped_column(String(200), nullable=False)
-    field_of_study: Mapped[str] = mapped_column(String(200), nullable=False)
+    institution: Mapped[str] = mapped_column(String(255), default="School / Institution", nullable=False)
+    degree: Mapped[str] = mapped_column(String(200), default="General Qualification", nullable=False)
+    field_of_study: Mapped[str] = mapped_column(String(200), default="General", nullable=False)
+    education_level: Mapped[EducationLevel | None] = mapped_column(
+        Enum(EducationLevel, native_enum=False, length=60),
+        nullable=True,
+    )
+    academic_stream: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    grading_system: Mapped[str | None] = mapped_column(String(50), nullable=True)
     start_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     end_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     grade: Mapped[str | None] = mapped_column(String(50), nullable=True)
     grading_scale: Mapped[str | None] = mapped_column(String(50), nullable=True)
     country: Mapped[str | None] = mapped_column(String(100), nullable=True)
     is_current: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_highest: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="academic_records")
 
