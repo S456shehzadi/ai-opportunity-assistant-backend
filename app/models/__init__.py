@@ -15,6 +15,7 @@ from app.models.opportunity import (
 )
 from app.models.profile import (
     AcademicRecord,
+    Certification,
     EducationLevel,
     Language,
     LanguageProficiency,
@@ -23,6 +24,7 @@ from app.models.profile import (
     ResearchExperience,
     Skill,
     SkillProficiency,
+    SkillStatus,
     TestResult,
     TestType,
     UserPreferences,

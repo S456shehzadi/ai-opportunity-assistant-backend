@@ -43,6 +43,15 @@ class UnifiedUserFacts(BaseModel):
 
     # Skills & Languages
     skills: list[str] = Field(default_factory=list)
+    skills_have: list[str] = Field(default_factory=list)
+    skills_learning: list[str] = Field(default_factory=list)
+    skills_desired: list[str] = Field(default_factory=list)
+    primary_field: str | None = None
+    secondary_fields: list[str] = Field(default_factory=list)
+    specializations: list[str] = Field(default_factory=list)
+    career_goals: list[str] = Field(default_factory=list)
+    learning_goals: list[str] = Field(default_factory=list)
+    certifications: list[dict[str, Any]] = Field(default_factory=list)
     languages: dict[str, str] = Field(default_factory=dict)
 
     # Raw sources for evidence
@@ -135,6 +144,15 @@ class ProfileAdapter:
             has_research_experience=profile.research_experience.has_research_experience,
             publication_count=profile.publications.publication_count,
             skills=[s.normalized_name for s in profile.skills],
+            skills_have=profile.skills_have,
+            skills_learning=profile.skills_learning,
+            skills_desired=profile.skills_desired,
+            primary_field=profile.primary_field,
+            secondary_fields=profile.secondary_fields,
+            specializations=profile.specializations,
+            career_goals=profile.career_goals,
+            learning_goals=profile.learning_goals,
+            certifications=profile.certifications,
             languages=dict(profile.languages),
             source_records={"profile_type": "NormalizedAIProfile"},
         )
@@ -201,6 +219,15 @@ class ProfileAdapter:
             has_research_experience=data.get("has_research_experience", False),
             publication_count=data.get("publication_count", 0),
             skills=data.get("skills", []),
+            skills_have=data.get("skills_have", []),
+            skills_learning=data.get("skills_learning", []),
+            skills_desired=data.get("skills_desired", []),
+            primary_field=data.get("primary_field"),
+            secondary_fields=data.get("secondary_fields", []),
+            specializations=data.get("specializations", []),
+            career_goals=data.get("career_goals", []),
+            learning_goals=data.get("learning_goals", []),
+            certifications=data.get("certifications", []),
             languages=data.get("languages", {}),
             source_records=data,
         )
@@ -260,6 +287,23 @@ class ProfileAdapter:
                 }
             )
 
+        # Extract skills if relationship exists on user
+        db_user = getattr(db_profile, "user", None)
+        skills_have: list[str] = []
+        skills_learning: list[str] = []
+        skills_desired: list[str] = []
+        all_skills: list[str] = []
+        if db_user and hasattr(db_user, "skills"):
+            for s in db_user.skills:
+                all_skills.append(s.name)
+                st = s.status.value if hasattr(s.status, "value") else str(s.status or "have")
+                if st == "have":
+                    skills_have.append(s.name)
+                elif st == "learning":
+                    skills_learning.append(s.name)
+                elif st == "desired":
+                    skills_desired.append(s.name)
+
         return UnifiedUserFacts(
             user_id=user_id,
             nationality=getattr(db_profile, "nationality", None),
@@ -268,6 +312,15 @@ class ProfileAdapter:
             date_of_birth=dob,
             age=age,
             academic_records=records,
+            primary_field=getattr(db_profile, "primary_field", None),
+            secondary_fields=getattr(db_profile, "secondary_fields", None) or [],
+            specializations=getattr(db_profile, "specializations", None) or [],
+            career_goals=getattr(db_profile, "career_goals", None) or [],
+            learning_goals=getattr(db_profile, "learning_goals", None) or [],
+            skills=all_skills,
+            skills_have=skills_have,
+            skills_learning=skills_learning,
+            skills_desired=skills_desired,
             highest_cgpa=getattr(db_profile, "cgpa", None),
             highest_percentage=getattr(db_profile, "percentage", None),
             source_records={"model": "UserProfile"},

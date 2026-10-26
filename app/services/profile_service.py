@@ -3,6 +3,7 @@ import uuid
 from app.core.exceptions import EntityNotFoundException
 from app.models.profile import (
     AcademicRecord,
+    Certification,
     Language,
     Project,
     Publication,
@@ -18,6 +19,7 @@ from app.repositories.profile_repository import ProfileRepository
 from app.schemas.ai_profile import NormalizedAIProfile
 from app.schemas.profile import (
     AcademicRecordCreate,
+    CertificationCreate,
     LanguageCreate,
     ProjectCreate,
     PublicationCreate,
@@ -130,6 +132,32 @@ class ProfileService:
         if not user:
             raise EntityNotFoundException("User", user_id)
         return await self.repo.add_project(user_id, data.model_dump())
+
+    async def delete_project(self, user_id: uuid.UUID, project_id: uuid.UUID) -> bool:
+        deleted = await self.repo.delete_project(user_id, project_id)
+        if not deleted:
+            raise EntityNotFoundException("Project", project_id)
+        return True
+
+    async def delete_skill(self, user_id: uuid.UUID, skill_id: uuid.UUID) -> bool:
+        deleted = await self.repo.delete_skill(user_id, skill_id)
+        if not deleted:
+            raise EntityNotFoundException("Skill", skill_id)
+        return True
+
+    async def add_certification(
+        self, user_id: uuid.UUID, data: CertificationCreate
+    ) -> Certification:
+        user = await self.repo.get_user_by_id(user_id)
+        if not user:
+            raise EntityNotFoundException("User", user_id)
+        return await self.repo.add_certification(user_id, data.model_dump())
+
+    async def delete_certification(self, user_id: uuid.UUID, cert_id: uuid.UUID) -> bool:
+        deleted = await self.repo.delete_certification(user_id, cert_id)
+        if not deleted:
+            raise EntityNotFoundException("Certification", cert_id)
+        return True
 
     async def add_language(self, user_id: uuid.UUID, data: LanguageCreate) -> Language:
         user = await self.repo.get_user_by_id(user_id)

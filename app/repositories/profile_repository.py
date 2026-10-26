@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.profile import (
     AcademicRecord,
+    Certification,
     Language,
     Project,
     Publication,
@@ -56,6 +57,7 @@ class ProfileRepository:
                 selectinload(User.publications),
                 selectinload(User.projects),
                 selectinload(User.languages),
+                selectinload(User.certifications),
             )
         )
         result = await self.session.execute(stmt)
@@ -142,10 +144,37 @@ class ProfileRepository:
 
     # Skills
     async def add_skill(self, user_id: uuid.UUID, data: dict[str, Any]) -> Skill:
+        name = data.get("name")
+        if name:
+            stmt = select(Skill).where(
+                Skill.user_id == user_id,
+                Skill.name.ilike(name.strip())
+            )
+            res = await self.session.execute(stmt)
+            existing = res.scalars().first()
+            if existing:
+                for k, v in data.items():
+                    if hasattr(existing, k) and v is not None:
+                        setattr(existing, k, v)
+                await self.session.flush()
+                return existing
+
         skill = Skill(user_id=user_id, **data)
         self.session.add(skill)
         await self.session.flush()
         return skill
+
+    async def delete_skill(self, user_id: uuid.UUID, skill_id: uuid.UUID) -> bool:
+        stmt = select(Skill).where(
+            Skill.id == skill_id, Skill.user_id == user_id
+        )
+        result = await self.session.execute(stmt)
+        record = result.scalar_one_or_none()
+        if record:
+            await self.session.delete(record)
+            await self.session.flush()
+            return True
+        return False
 
     # Work Experiences
     async def add_work_experience(self, user_id: uuid.UUID, data: dict[str, Any]) -> WorkExperience:
@@ -176,6 +205,35 @@ class ProfileRepository:
         self.session.add(proj)
         await self.session.flush()
         return proj
+
+    async def delete_project(self, user_id: uuid.UUID, project_id: uuid.UUID) -> bool:
+        stmt = select(Project).where(Project.id == project_id, Project.user_id == user_id)
+        result = await self.session.execute(stmt)
+        record = result.scalar_one_or_none()
+        if record:
+            await self.session.delete(record)
+            await self.session.flush()
+            return True
+        return False
+
+    # Certifications
+    async def add_certification(self, user_id: uuid.UUID, data: dict[str, Any]) -> Certification:
+        cert = Certification(user_id=user_id, **data)
+        self.session.add(cert)
+        await self.session.flush()
+        return cert
+
+    async def delete_certification(self, user_id: uuid.UUID, cert_id: uuid.UUID) -> bool:
+        stmt = select(Certification).where(
+            Certification.id == cert_id, Certification.user_id == user_id
+        )
+        result = await self.session.execute(stmt)
+        record = result.scalar_one_or_none()
+        if record:
+            await self.session.delete(record)
+            await self.session.flush()
+            return True
+        return False
 
     # Languages
     async def add_language(self, user_id: uuid.UUID, data: dict[str, Any]) -> Language:

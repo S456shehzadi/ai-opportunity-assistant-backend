@@ -7,6 +7,8 @@ from app.models.user import User
 from app.schemas.profile import (
     AcademicRecordCreate,
     AcademicRecordRead,
+    CertificationCreate,
+    CertificationRead,
     FullUserProfileRead,
     LanguageCreate,
     LanguageRead,
@@ -236,3 +238,57 @@ async def add_language(
 ) -> LanguageRead:
     lang = await service.add_language(current_user.id, data)
     return LanguageRead.model_validate(lang)
+
+
+@router.delete(
+    "/skills/{skill_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete Skill",
+)
+async def delete_skill(
+    skill_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    service: ProfileService = Depends(get_profile_service),
+) -> None:
+    await service.delete_skill(current_user.id, skill_id)
+
+
+@router.delete(
+    "/projects/{project_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete Project",
+)
+async def delete_project(
+    project_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    service: ProfileService = Depends(get_profile_service),
+) -> None:
+    await service.delete_project(current_user.id, project_id)
+
+
+@router.post(
+    "/certifications",
+    response_model=CertificationRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add Certification",
+)
+async def add_certification(
+    data: CertificationCreate,
+    current_user: User = Depends(get_current_user),
+    service: ProfileService = Depends(get_profile_service),
+) -> CertificationRead:
+    cert = await service.add_certification(current_user.id, data)
+    return CertificationRead.model_validate(cert)
+
+
+@router.delete(
+    "/certifications/{cert_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete Certification",
+)
+async def delete_certification(
+    cert_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    service: ProfileService = Depends(get_profile_service),
+) -> None:
+    await service.delete_certification(current_user.id, cert_id)

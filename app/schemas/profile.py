@@ -28,6 +28,20 @@ class UserProfileBase(BaseModel):
     cgpa: float | None = Field(default=None, ge=0.0, le=10.0)
     percentage: float | None = Field(default=None, ge=0.0, le=100.0)
 
+    # Professional Fields, Specializations, and Goals
+    primary_field: str | None = Field(default=None, max_length=150)
+    secondary_fields: list[str] | None = None
+    specializations: list[str] | None = None
+    career_goals: list[str] | None = None
+    learning_goals: list[str] | None = None
+
+    # Professional Fields, Specializations, and Goals
+    primary_field: str | None = Field(default=None, max_length=150)
+    secondary_fields: list[str] = Field(default_factory=list)
+    specializations: list[str] = Field(default_factory=list)
+    career_goals: list[str] = Field(default_factory=list)
+    learning_goals: list[str] = Field(default_factory=list)
+
     @field_validator("nationality", "country_of_residence", "city", mode="before")
     @classmethod
     def strip_whitespace(cls, v: Any) -> Any:
@@ -55,6 +69,13 @@ class UserProfileUpdate(BaseModel):
     graduation_year: int | None = Field(default=None, ge=1950, le=2100)
     cgpa: float | None = Field(default=None, ge=0.0, le=10.0)
     percentage: float | None = Field(default=None, ge=0.0, le=100.0)
+
+    # Professional Fields, Specializations, and Goals
+    primary_field: str | None = Field(default=None, max_length=150)
+    secondary_fields: list[str] | None = None
+    specializations: list[str] | None = None
+    career_goals: list[str] | None = None
+    learning_goals: list[str] | None = None
 
 
 class UserProfileRead(UserProfileBase):
@@ -158,6 +179,8 @@ class SkillBase(BaseModel):
     category: str | None = Field(default=None, max_length=100)
     proficiency: SkillProficiency = SkillProficiency.INTERMEDIATE
     years_of_experience: float | None = Field(default=None, ge=0.0, le=70.0)
+    status: str = Field(default="have", max_length=30)
+    acquisition_source: str | None = Field(default=None, max_length=100)
 
 
 class SkillCreate(SkillBase):
@@ -183,6 +206,8 @@ class WorkExperienceBase(BaseModel):
     end_date: date | None = None
     is_current: bool = False
     description: str | None = Field(default=None, max_length=5000)
+    skills_used: list[str] = Field(default_factory=list)
+    portfolio_url: str | None = Field(default=None, max_length=500)
 
     @model_validator(mode="after")
     def validate_dates(self) -> "WorkExperienceBase":
@@ -263,8 +288,12 @@ class PublicationRead(PublicationBase):
 class ProjectBase(BaseModel):
     title: str = Field(min_length=2, max_length=255)
     description: str | None = Field(default=None, max_length=3000)
+    project_type: str | None = Field(default="Personal", max_length=100)
+    role: str | None = Field(default=None, max_length=150)
     technologies: list[str] = Field(default_factory=list)
+    skills: list[str] = Field(default_factory=list)
     project_url: str | None = Field(default=None, max_length=500)
+    outcome: str | None = Field(default=None, max_length=3000)
     start_date: date | None = None
     end_date: date | None = None
 
@@ -280,6 +309,32 @@ class ProjectCreate(ProjectBase):
 
 
 class ProjectRead(ProjectBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    user_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+# Certifications & Training
+class CertificationBase(BaseModel):
+    title: str = Field(min_length=2, max_length=255)
+    issuing_organization: str = Field(min_length=2, max_length=255)
+    category: str | None = Field(default=None, max_length=100)
+    status: str = Field(default="Completed", max_length=50)
+    issue_date: date | None = None
+    expiry_date: date | None = None
+    credential_id: str | None = Field(default=None, max_length=150)
+    verification_url: str | None = Field(default=None, max_length=500)
+    skills: list[str] = Field(default_factory=list)
+
+
+class CertificationCreate(CertificationBase):
+    pass
+
+
+class CertificationRead(CertificationBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -345,6 +400,7 @@ class FullUserProfileRead(BaseModel):
     academic_records: list[AcademicRecordRead] = Field(default_factory=list)
     test_results: list[TestResultRead] = Field(default_factory=list)
     skills: list[SkillRead] = Field(default_factory=list)
+    certifications: list[CertificationRead] = Field(default_factory=list)
     work_experiences: list[WorkExperienceRead] = Field(default_factory=list)
     research_experiences: list[ResearchExperienceRead] = Field(default_factory=list)
     publications: list[PublicationRead] = Field(default_factory=list)

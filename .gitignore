@@ -54,3 +54,5 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+*.safetensors
+tests/test_artifacts/

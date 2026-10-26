@@ -91,9 +91,32 @@ class TestType(StrEnum):
 
 class SkillProficiency(StrEnum):
     BEGINNER = "Beginner"
+    BASIC = "Basic working knowledge"
     INTERMEDIATE = "Intermediate"
     ADVANCED = "Advanced"
     EXPERT = "Expert"
+
+    @classmethod
+    def _missing_(cls, value: object) -> SkillProficiency | None:
+        if isinstance(value, str):
+            val_norm = value.strip().lower()
+            if "expert" in val_norm:
+                return cls.EXPERT
+            if "adv" in val_norm:
+                return cls.ADVANCED
+            if "inter" in val_norm:
+                return cls.INTERMEDIATE
+            if "basic" in val_norm or "working" in val_norm:
+                return cls.BASIC
+            if "beg" in val_norm or "novice" in val_norm:
+                return cls.BEGINNER
+        return None
+
+
+class SkillStatus(StrEnum):
+    HAVE = "have"
+    LEARNING = "learning"
+    DESIRED = "desired"
 
 
 class LanguageProficiency(StrEnum):
@@ -136,6 +159,13 @@ class UserProfile(Base, UUIDMixin, TimestampMixin):
     graduation_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     cgpa: Mapped[float | None] = mapped_column(Float, nullable=True)
     percentage: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Professional Fields, Specializations, and Goals
+    primary_field: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    secondary_fields: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    specializations: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    career_goals: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    learning_goals: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="profile")
 
@@ -223,6 +253,8 @@ class Skill(Base, UUIDMixin, TimestampMixin):
         nullable=False,
     )
     years_of_experience: Mapped[float | None] = mapped_column(Float, nullable=True)
+    status: Mapped[str] = mapped_column(String(30), default=SkillStatus.HAVE.value, nullable=False)
+    acquisition_source: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="skills")
 
@@ -246,6 +278,8 @@ class WorkExperience(Base, UUIDMixin, TimestampMixin):
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     is_current: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    skills_used: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    portfolio_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="work_experiences")
 
@@ -308,12 +342,40 @@ class Project(Base, UUIDMixin, TimestampMixin):
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    project_type: Mapped[str | None] = mapped_column(String(100), default="Personal", nullable=True)
+    role: Mapped[str | None] = mapped_column(String(150), nullable=True)
     technologies: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    skills: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     project_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    outcome: Mapped[str | None] = mapped_column(Text, nullable=True)
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="projects")
+
+
+class Certification(Base, UUIDMixin, TimestampMixin):
+    """Professional, technical, vocational credentials and licenses."""
+
+    __tablename__ = "certifications"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+        nullable=False,
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    issuing_organization: Mapped[str] = mapped_column(String(255), nullable=False)
+    category: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    status: Mapped[str] = mapped_column(String(50), default="Completed", nullable=False)  # Completed, In Progress
+    issue_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    expiry_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    credential_id: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    verification_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    skills: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+
+    user: Mapped["User"] = relationship("User", back_populates="certifications")
 
 
 class Language(Base, UUIDMixin, TimestampMixin):

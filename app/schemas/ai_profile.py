@@ -65,6 +65,8 @@ class NormalizedSkillItem(BaseModel):
     category: str
     proficiency: str | None = None
     years_of_experience: float | None = None
+    status: str = "have"  # have, learning, desired
+    acquisition_source: str | None = None
 
 
 class WorkExperienceSummary(BaseModel):
@@ -139,6 +141,19 @@ class NormalizedAIProfile(BaseModel):
     funding_preferences: FundingPreferences
 
     completeness: InformationCompleteness
+
+    # Fields & Career Goals
+    primary_field: str | None = None
+    secondary_fields: list[str] = Field(default_factory=list)
+    specializations: list[str] = Field(default_factory=list)
+    career_goals: list[str] = Field(default_factory=list)
+    learning_goals: list[str] = Field(default_factory=list)
+    certifications: list[dict[str, Any]] = Field(default_factory=list)
+
+    # Categorized skill status
+    skills_have: list[str] = Field(default_factory=list)
+    skills_learning: list[str] = Field(default_factory=list)
+    skills_desired: list[str] = Field(default_factory=list)
 
     # Fast-lookup signals for filtering
     matching_signals: dict[str, Any] = Field(default_factory=dict)

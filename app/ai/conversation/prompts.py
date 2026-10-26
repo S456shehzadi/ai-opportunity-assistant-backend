@@ -23,6 +23,10 @@ STRICT OPERATIONAL GUARDRAILS:
    technical diplomas, undergraduate, postgraduate, and research levels. Never dismiss an applicant
    because their education level is lower than a university degree unless the specific opportunity
    explicitly mandates a university degree.
+7. SKILLS AND COMPETENCY INTEGRITY:
+   - Strictly distinguish between skills the user actually has ('have'), skills they are currently developing ('learning'), and skills they wish or plan to learn ('desired').
+   - NEVER treat an interest or a desired skill as proof of proficiency or claim the user meets an opportunity's strict technical prerequisite on that basis alone.
+   - For early students (Matriculation / Intermediate) or vocational learners, value foundational academic subjects, practical trade coursework, and personal projects; never penalize them for lacking formal corporate work experience, research publications, or industry certifications.
 """
 
 CLARIFICATION_TEMPLATE = """I need a little more detail to help you find the best opportunities.

@@ -253,6 +253,14 @@ class FieldFitCalculator:
         # Gather user fields
         user_fields: list[str] = []
         if user_facts:
+            if getattr(user_facts, "primary_field", None):
+                user_fields.append(str(user_facts.primary_field).strip().lower())
+            for sf in (getattr(user_facts, "secondary_fields", None) or []):
+                if sf:
+                    user_fields.append(str(sf).strip().lower())
+            for spec in (getattr(user_facts, "specializations", None) or []):
+                if spec:
+                    user_fields.append(str(spec).strip().lower())
             for rec in user_facts.academic_records:
                 if rec.get("field_of_study"):
                     user_fields.append(str(rec["field_of_study"]).strip().lower())
@@ -328,6 +336,14 @@ class FieldFitCalculator:
                 if 0.75 > best_score:
                     best_score = 0.75
                     best_reason = f"Field mentioned in program overview: {u_f}."
+
+        # Check verified competencies (strictly 'skills_have', never 'desired')
+        if user_facts and user_facts.skills_have:
+            for s in user_facts.skills_have:
+                if s and re.search(r"\b" + re.escape(s.lower()) + r"\b", title + " " + desc):
+                    if 0.70 > best_score:
+                        best_score = 0.70
+                        best_reason = f"Verified skill aligned with opportunity overview: {s}."
 
         if best_score > 0.0:
             return RankingFactorDetail(

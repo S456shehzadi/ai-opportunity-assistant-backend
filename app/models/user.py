@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from app.models.interaction import AIInteraction, SearchSession
     from app.models.profile import (
         AcademicRecord,
+        Certification,
         Language,
         Project,
         Publication,
@@ -118,6 +119,12 @@ class User(Base, UUIDMixin, TimestampMixin):
         back_populates="user",
         cascade="all, delete-orphan",
         order_by="desc(Project.start_date)",
+    )
+    certifications: Mapped[list["Certification"]] = relationship(
+        "Certification",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="desc(Certification.issue_date)",
     )
     languages: Mapped[list["Language"]] = relationship(
         "Language",

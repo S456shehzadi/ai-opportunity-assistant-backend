@@ -101,13 +101,13 @@ def test_skills_normalizer() -> None:
         "python programming", proficiency="Expert", years_of_experience=4.0
     )
     assert res1.normalized_name == "Python"
-    assert res1.category == "Programming Languages"
+    assert res1.category == "Technical & Digital Skills"
     assert res1.proficiency == "Expert"
     assert res1.years_of_experience == 4.0
 
     res2 = SkillsNormalizer.normalize_skill("PyTorch", proficiency="Advanced")
     assert res2.normalized_name == "PyTorch"
-    assert res2.category == "AI/ML Frameworks"
+    assert res2.category == "Technical & Digital Skills"
 
 
 def test_test_normalizer_validity_and_unknown() -> None:

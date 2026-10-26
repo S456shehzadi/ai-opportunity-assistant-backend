@@ -75,6 +75,15 @@ class AIProfileContext(BaseModel):
     academics: AcademicSummary
     standardized_tests: StandardizedTestsSummary
     skills: list[str] = Field(default_factory=list)
+    skills_have: list[str] = Field(default_factory=list)
+    skills_learning: list[str] = Field(default_factory=list)
+    skills_desired: list[str] = Field(default_factory=list)
+    primary_field: str | None = None
+    secondary_fields: list[str] = Field(default_factory=list)
+    specializations: list[str] = Field(default_factory=list)
+    career_goals: list[str] = Field(default_factory=list)
+    learning_goals: list[str] = Field(default_factory=list)
+    certifications: list[dict[str, Any]] = Field(default_factory=list)
     languages: dict[str, str] = Field(default_factory=dict)
     experience: ExperienceSummary
     preferences: PreferencesSummary
@@ -240,12 +249,18 @@ class ProfileNormalizer:
 
         # 4. Skills
         normalized_skills: list[NormalizedSkillItem] = []
+        skills_have: list[str] = []
+        skills_learning: list[str] = []
+        skills_desired: list[str] = []
         for s in user.skills:
+            status_val = s.status.value if hasattr(s.status, "value") else str(s.status or "have")
             norm_s = SkillsNormalizer.normalize_skill(
                 raw_skill=s.name,
                 proficiency=s.proficiency.value if s.proficiency else None,
                 years_of_experience=s.years_of_experience,
                 user_category=s.category,
+                status=status_val,
+                acquisition_source=getattr(s, "acquisition_source", None),
             )
             normalized_skills.append(
                 NormalizedSkillItem(
@@ -254,8 +269,16 @@ class ProfileNormalizer:
                     category=norm_s.category,
                     proficiency=norm_s.proficiency,
                     years_of_experience=norm_s.years_of_experience,
+                    status=norm_s.status,
+                    acquisition_source=norm_s.acquisition_source,
                 )
             )
+            if norm_s.status == "have":
+                skills_have.append(norm_s.normalized_name)
+            elif norm_s.status == "learning":
+                skills_learning.append(norm_s.normalized_name)
+            elif norm_s.status == "desired":
+                skills_desired.append(norm_s.normalized_name)
 
         # 5. Work & Research Experience
         total_work_years = (
@@ -337,6 +360,25 @@ class ProfileNormalizer:
             missing_critical_signals=missing_critical,
         )
 
+        # Certifications
+        cert_items: list[dict[str, Any]] = []
+        for c in getattr(user, "certifications", []):
+            cert_items.append({
+                "id": str(c.id),
+                "title": c.title,
+                "issuing_organization": c.issuing_organization,
+                "category": c.category,
+                "status": c.status,
+                "credential_id": c.credential_id,
+                "skills": c.skills or [],
+            })
+
+        primary_field = getattr(profile, "primary_field", None) if profile else None
+        secondary_fields = (getattr(profile, "secondary_fields", None) or []) if profile else []
+        specializations = (getattr(profile, "specializations", None) or []) if profile else []
+        career_goals = (getattr(profile, "career_goals", None) or []) if profile else []
+        learning_goals = (getattr(profile, "learning_goals", None) or []) if profile else []
+
         # Quick matching lookup signals
         matching_signals = {
             "eligible_nationalities": [nat for nat in [identity.nationality, "Global"] if nat],
@@ -344,9 +386,15 @@ class ProfileNormalizer:
             "residence_code": identity.residence_country_code,
             "highest_degree": academic_perf.highest_degree_level,
             "fields": [e.normalized_field for e in education_items if e.normalized_field],
+            "primary_field": primary_field,
+            "specializations": specializations,
+            "career_goals": career_goals,
             "gpa_4_scale": academic_perf.normalized_gpa_4_scale,
             "has_publications": pub_summary.publication_count > 0,
             "skills": [s.normalized_name for s in normalized_skills],
+            "skills_have": skills_have,
+            "skills_learning": skills_learning,
+            "skills_desired": skills_desired,
             "valid_tests": [
                 t.canonical_test_name
                 for t in normalized_tests.values()
@@ -364,6 +412,15 @@ class ProfileNormalizer:
             academic_performance=academic_perf,
             tests=normalized_tests,
             skills=normalized_skills,
+            primary_field=primary_field,
+            secondary_fields=secondary_fields,
+            specializations=specializations,
+            career_goals=career_goals,
+            learning_goals=learning_goals,
+            certifications=cert_items,
+            skills_have=skills_have,
+            skills_learning=skills_learning,
+            skills_desired=skills_desired,
             languages={lang.language_name: lang.proficiency.value for lang in user.languages},
             work_experience=work_summary,
             research_experience=research_summary,
@@ -457,6 +514,15 @@ class ProfileNormalizer:
             academics=academics,
             standardized_tests=standardized_tests,
             skills=[s.normalized_name for s in rich_profile.skills],
+            skills_have=rich_profile.skills_have,
+            skills_learning=rich_profile.skills_learning,
+            skills_desired=rich_profile.skills_desired,
+            primary_field=rich_profile.primary_field,
+            secondary_fields=rich_profile.secondary_fields,
+            specializations=rich_profile.specializations,
+            career_goals=rich_profile.career_goals,
+            learning_goals=rich_profile.learning_goals,
+            certifications=rich_profile.certifications,
             languages=rich_profile.languages,
             experience=experience,
             preferences=preferences,
