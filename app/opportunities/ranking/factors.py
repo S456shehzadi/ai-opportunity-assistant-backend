@@ -52,11 +52,14 @@ def get_opp_category(opp: Any) -> str:
 
 
 def get_opp_host_country(opp: Any) -> str:
-    hc = getattr(opp, "host_country", None)
+    hc = getattr(opp, "host_country", None) or getattr(opp, "country", None)
     if hasattr(hc, "value"):
         return str(hc.value or "Global")
     if hc:
         return str(hc)
+    host_countries = getattr(opp, "host_countries", [])
+    if host_countries:
+        return host_countries[0]
     countries = getattr(opp, "countries", [])
     if countries:
         return countries[0]
@@ -443,14 +446,17 @@ class LocationFitCalculator:
         host_country = get_opp_host_country(opp)
         host_norm = GeoNormalizer.normalize_country(host_country)
         host_code = host_norm.code if host_norm else ""
+        is_remote = getattr(opp, "is_remote", False) or "remote" in host_country.lower() or "online" in host_country.lower()
 
         preferred_locations: list[str] = []
+        acceptable_locations: list[str] = []
         excluded_locations: list[str] = []
+        discovery_mode: str = "flexible"
 
         if preferences:
             for p in preferences:
                 cat = p.category.upper()
-                if cat in ("LOCATION", "COUNTRY", "REGION"):
+                if cat in ("LOCATION", "COUNTRY", "REGION", "DESTINATION"):
                     vals = p.value if isinstance(p.value, list) else [p.value]
                     for v in vals:
                         cleaned = str(v).strip().lower()
@@ -458,11 +464,16 @@ class LocationFitCalculator:
                             excluded_locations.append(cleaned[3:])
                         else:
                             preferred_locations.append(cleaned)
-                elif cat == "EXCLUDE_COUNTRY":
+                elif cat in ("ACCEPTABLE_COUNTRIES", "ACCEPTABLE_LOCATION"):
+                    vals = p.value if isinstance(p.value, list) else [p.value]
+                    acceptable_locations.extend(str(v).strip().lower() for v in vals)
+                elif cat in ("EXCLUDE_COUNTRY", "EXCLUDED_COUNTRIES"):
                     vals = p.value if isinstance(p.value, list) else [p.value]
                     excluded_locations.extend(str(v).strip().lower() for v in vals)
+                elif cat in ("DISCOVERY_MODE", "GLOBAL_MODE"):
+                    discovery_mode = str(p.value).strip().lower()
 
-        # Check exclusion first
+        # 1. Check exclusion first (unless remote)
         for ex in excluded_locations:
             if (host_norm and ex in (host_norm.name.lower(), host_norm.code.lower())) or (
                 ex == host_country.lower()
@@ -475,21 +486,40 @@ class LocationFitCalculator:
                     confidence=RecommendationConfidence.HIGH,
                 )
 
-        # If user has no specific geographic preferences
+        # 2. Fully remote or online programs are globally viable
+        if is_remote:
+            return RankingFactorDetail(
+                factor_type=RankingFactorType.LOCATION_FIT,
+                score=0.92,
+                status="HIGH",
+                reason="Available globally as an online / remote program.",
+                confidence=RecommendationConfidence.HIGH,
+            )
+
+        # 3. Worldwide mode or no restrictions active
+        if discovery_mode == "worldwide" or "worldwide" in preferred_locations or "global" in preferred_locations:
+            return RankingFactorDetail(
+                factor_type=RankingFactorType.LOCATION_FIT,
+                score=0.88,
+                status="HIGH",
+                reason=f"Located in {host_country}; open to worldwide discovery.",
+                confidence=RecommendationConfidence.HIGH,
+            )
+
+        # 4. If user has no specific geographic preferences
         if not preferred_locations:
             return RankingFactorDetail(
                 factor_type=RankingFactorType.LOCATION_FIT,
                 score=0.80,
                 status="HIGH",
-                reason=f"Location ({host_country}) - no geographical restrictions active.",
+                reason=f"Location ({host_country}) - global exploration enabled.",
                 confidence=RecommendationConfidence.MEDIUM,
             )
 
-        # Check preferred locations
+        # 5. Check preferred locations
         is_matched = False
         matched_dest = ""
         for pref in preferred_locations:
-            # Check if preference is a region like "europe"
             norm_region = GeoNormalizer.normalize_region(pref)
             if norm_region and host_code and GeoNormalizer.is_in_region(host_code, norm_region):
                 is_matched = True
@@ -515,6 +545,19 @@ class LocationFitCalculator:
                 confidence=RecommendationConfidence.HIGH,
             )
 
+        # 6. Check acceptable locations
+        for acc in acceptable_locations:
+            if (host_norm and acc in (host_norm.name.lower(), host_norm.code.lower())) or (
+                acc in host_country.lower()
+            ):
+                return RankingFactorDetail(
+                    factor_type=RankingFactorType.LOCATION_FIT,
+                    score=0.78,
+                    status="MEDIUM",
+                    reason=f"Located in acceptable consideration destination ({host_country}).",
+                    confidence=RecommendationConfidence.HIGH,
+                )
+
         if host_country.lower() in ("global", "worldwide", "international", "anywhere"):
             return RankingFactorDetail(
                 factor_type=RankingFactorType.LOCATION_FIT,
@@ -522,6 +565,16 @@ class LocationFitCalculator:
                 status="HIGH",
                 reason="Global opportunity open across countries.",
                 confidence=RecommendationConfidence.HIGH,
+            )
+
+        # In flexible mode, give a respectable score with transparent explanation
+        if discovery_mode == "flexible":
+            return RankingFactorDetail(
+                factor_type=RankingFactorType.LOCATION_FIT,
+                score=0.60,
+                status="MEDIUM",
+                reason=f"Outside primary preferred destinations ({host_country}), included via flexible discovery.",
+                confidence=RecommendationConfidence.MEDIUM,
             )
 
         return RankingFactorDetail(

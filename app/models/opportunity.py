@@ -80,12 +80,19 @@ class Opportunity(Base, UUIDMixin, TimestampMixin):
     )
     description: Mapped[str] = mapped_column(Text, nullable=False)
     country: Mapped[str] = mapped_column(String(100), default="Global", nullable=False)
+    host_countries: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    host_regions: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    location_type: Mapped[str] = mapped_column(String(50), default="in_person", nullable=False)
+    is_remote: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     eligible_countries: Mapped[list[str]] = mapped_column(
         JSON, default=lambda: ["Global"], nullable=False
     )
     eligible_nationalities: Mapped[list[str]] = mapped_column(
         JSON, default=lambda: ["Global"], nullable=False
+    )
+    restricted_applicant_countries: Mapped[list[str]] = mapped_column(
+        JSON, default=list, nullable=False
     )
     degree_levels: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     fields: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)

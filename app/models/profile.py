@@ -139,7 +139,9 @@ class UserProfile(Base, UUIDMixin, TimestampMixin):
         nullable=False,
     )
     nationality: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    citizenships: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     country_of_residence: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    previous_education_country: Mapped[str | None] = mapped_column(String(100), nullable=True)
     city: Mapped[str | None] = mapped_column(String(100), nullable=True)
     date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
 
@@ -428,10 +430,14 @@ class UserPreferences(Base, UUIDMixin, TimestampMixin):
     preferred_fields: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
 
     # Destination & Location
+    discovery_mode: Mapped[str] = mapped_column(String(30), default="flexible", nullable=False)
     preferred_countries: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    acceptable_countries: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     preferred_regions: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     excluded_countries: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     willing_to_relocate: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    willing_to_travel: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    open_to_remote: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     remote_preference: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # Funding & Financial Constraints

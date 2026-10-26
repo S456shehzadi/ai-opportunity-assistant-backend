@@ -130,11 +130,14 @@ class HardFilterEngine:
                 host = get_opp_host_country(opp)
                 host_norm = GeoNormalizer.normalize_country(host)
                 host_code = host_norm.code if host_norm else ""
+                is_remote = getattr(opp, "is_remote", False) or "remote" in host.lower() or "online" in host.lower()
 
                 wanted_locs = val if isinstance(val, list) else [val]
                 is_loc_pass = False
 
-                if host.lower() in ("global", "worldwide", "international", "anywhere"):
+                if is_remote or host.lower() in ("global", "worldwide", "international", "anywhere"):
+                    is_loc_pass = True
+                elif any(str(w).lower() in ("worldwide", "global", "anywhere") for w in wanted_locs):
                     is_loc_pass = True
                 else:
                     for loc_req in wanted_locs:
@@ -160,6 +163,17 @@ class HardFilterEngine:
                         passed=False,
                         rejection_reason=f"Outside required locations ({req_str}; found: {host}).",
                         filter_category="LOCATION",
+                    )
+
+            # Applicant Nationality Eligibility Hard Filter
+            elif cat in ("CITIZENSHIP", "NATIONALITY", "APPLICANT_COUNTRY"):
+                user_citizenships = [str(c).lower() for c in (val if isinstance(val, list) else [val])]
+                restricted = [str(c).lower() for c in getattr(opp, "restricted_applicant_countries", [])]
+                if any(c in restricted for c in user_citizenships if c):
+                    return FilterEvaluation(
+                        passed=False,
+                        rejection_reason="Applicant nationality or citizenship is restricted by official program guidelines.",
+                        filter_category="ELIGIBILITY",
                     )
 
             # Opportunity Category Hard Filter

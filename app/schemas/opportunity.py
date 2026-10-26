@@ -64,9 +64,14 @@ class OpportunityBase(BaseModel):
     category: OpportunityCategory = OpportunityCategory.SCHOLARSHIP
     description: str = Field(min_length=10)
     country: str = Field(default="Global", max_length=100)
+    host_countries: list[str] = Field(default_factory=list)
+    host_regions: list[str] = Field(default_factory=list)
+    location_type: str = Field(default="in_person", max_length=50)
+    is_remote: bool = False
 
     eligible_countries: list[str] = Field(default_factory=lambda: ["Global"])
     eligible_nationalities: list[str] = Field(default_factory=lambda: ["Global"])
+    restricted_applicant_countries: list[str] = Field(default_factory=list)
     degree_levels: list[str] = Field(default_factory=list)
     fields: list[str] = Field(default_factory=list)
 
@@ -96,8 +101,13 @@ class OpportunityUpdate(BaseModel):
     category: OpportunityCategory | None = None
     description: str | None = None
     country: str | None = None
+    host_countries: list[str] | None = None
+    host_regions: list[str] | None = None
+    location_type: str | None = None
+    is_remote: bool | None = None
     eligible_countries: list[str] | None = None
     eligible_nationalities: list[str] | None = None
+    restricted_applicant_countries: list[str] | None = None
     degree_levels: list[str] | None = None
     fields: list[str] | None = None
     funding_type: str | None = None

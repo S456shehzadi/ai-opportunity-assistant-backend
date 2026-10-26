@@ -486,7 +486,13 @@ class ProfileNormalizer:
                 if t.status in (TestStatus.VALID, TestStatus.TAKEN)
             ],
             "preferred_countries": geo_prefs.preferred_countries,
+            "acceptable_countries": getattr(prefs, "acceptable_countries", []) or [],
             "preferred_regions": geo_prefs.preferred_regions,
+            "discovery_mode": getattr(prefs, "discovery_mode", "flexible") or "flexible",
+            "citizenships": getattr(profile, "citizenships", []) or ([identity.nationality] if identity.nationality else []),
+            "previous_education_country": getattr(profile, "previous_education_country", None),
+            "willing_to_travel": getattr(prefs, "willing_to_travel", True),
+            "open_to_remote": getattr(prefs, "open_to_remote", True),
             "preferred_categories": pref_cats,
             "target_degree_levels": getattr(prefs, "target_degree_levels", []) or [],
             "excluded_countries": getattr(prefs, "excluded_countries", []) or [],

@@ -14,7 +14,9 @@ from app.models.profile import (
 
 class UserProfileBase(BaseModel):
     nationality: str | None = Field(default=None, max_length=100)
+    citizenships: list[str] = Field(default_factory=list)
     country_of_residence: str | None = Field(default=None, max_length=100)
+    previous_education_country: str | None = Field(default=None, max_length=100)
     city: str | None = Field(default=None, max_length=100)
     date_of_birth: date | None = None
 
@@ -52,7 +54,9 @@ class UserProfileCreate(UserProfileBase):
 
 class UserProfileUpdate(BaseModel):
     nationality: str | None = Field(default=None, max_length=100)
+    citizenships: list[str] | None = None
     country_of_residence: str | None = Field(default=None, max_length=100)
+    previous_education_country: str | None = Field(default=None, max_length=100)
     city: str | None = Field(default=None, max_length=100)
     date_of_birth: date | None = None
     education_level: EducationLevel | None = None
@@ -403,10 +407,14 @@ class UserPreferencesBase(BaseModel):
     preferred_fields: list[str] = Field(default_factory=list)
 
     # Destination & Location
+    discovery_mode: str = Field(default="flexible", max_length=30)
     preferred_countries: list[str] = Field(default_factory=list)
+    acceptable_countries: list[str] = Field(default_factory=list)
     preferred_regions: list[str] = Field(default_factory=list)
     excluded_countries: list[str] = Field(default_factory=list)
     willing_to_relocate: bool = True
+    willing_to_travel: bool = True
+    open_to_remote: bool = True
     remote_preference: str | None = Field(default=None, max_length=100)
 
     # Funding & Financial Constraints
@@ -441,10 +449,14 @@ class UserPreferencesUpdate(BaseModel):
     preferred_opportunity_categories: list[str] | None = None
     target_degree_levels: list[str] | None = None
     preferred_fields: list[str] | None = None
+    discovery_mode: str | None = Field(default=None, max_length=30)
     preferred_countries: list[str] | None = None
+    acceptable_countries: list[str] | None = None
     preferred_regions: list[str] | None = None
     excluded_countries: list[str] | None = None
     willing_to_relocate: bool | None = None
+    willing_to_travel: bool | None = None
+    open_to_remote: bool | None = None
     remote_preference: str | None = Field(default=None, max_length=100)
     funding_preference: str | None = Field(default=None, max_length=100)
     funding_types: list[str] | None = None

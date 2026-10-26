@@ -57,6 +57,15 @@ class QueryOptimizer:
         elif any("bachelor" in d.lower() for d in degree_terms):
             excluded.extend(["master", "phd", "doctorate"])
 
+        # Incorporate user excluded countries from profile
+        discovery_mode = "flexible"
+        if profile and hasattr(profile, "matching_signals"):
+            discovery_mode = profile.matching_signals.get("discovery_mode", "flexible")
+            profile_excluded = profile.matching_signals.get("excluded_countries", [])
+            for exc in profile_excluded:
+                if exc and exc.lower() not in excluded:
+                    excluded.append(exc.lower())
+
         queries.append(
             SearchQuery(
                 query=p1_query,
@@ -109,6 +118,31 @@ class QueryOptimizer:
                     priority=2,
                     source_type="official_portal",
                     required_constraints=["Erasmus Mundus", "Europe"],
+                    excluded_terms=excluded,
+                )
+            )
+
+        # Worldwide & Global Discovery Planner Queries
+        if discovery_mode == "worldwide" or not loc_terms or any(l.lower() in ("worldwide", "global") for l in loc_terms):
+            global_parts = [p for p in [funding_str, deg_str, field_str, "scholarships international students worldwide"] if p]
+            queries.append(
+                SearchQuery(
+                    query=" ".join(global_parts),
+                    purpose="worldwide_open_applicant_search",
+                    priority=2,
+                    source_type="official_portal",
+                    required_constraints=["worldwide", cat_term],
+                    excluded_terms=excluded,
+                )
+            )
+            remote_parts = [p for p in ["global remote", cat_term, field_str, "international applicants"] if p]
+            queries.append(
+                SearchQuery(
+                    query=" ".join(remote_parts),
+                    purpose="global_remote_opportunity_search",
+                    priority=3,
+                    source_type="general_web",
+                    required_constraints=["global remote"],
                     excluded_terms=excluded,
                 )
             )
